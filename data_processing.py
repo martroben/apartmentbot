@@ -34,10 +34,30 @@ import time
 from calendar import timegm
 
 
+class Listing:
+    def __init__(self):
+        self.id: str = str()
+        self.portal: str = str()
+        self.active: int = int()
+        self.url: str = str()
+        self.image_url: str = str()
+        self.address: str = str()
+        self.city: str = str()
+        self.street: str = str()
+        self.house_number: str = str()
+        self.apartment_number: str = str()
+        self.n_rooms: int = int()
+        self.area_m2: float = float()
+        self.price: float = float()
+        self.construction_year: int = int()
+        self.date_added: float = float()
+        self.date_scraped: float = float()
+        self.date_removed: float = float()
+
 def normalize_string(string: str) -> str:
     """
     Converts string to lowercase and replaces umlauts
-    E.g. Üle õe äi -> ulo oe ai
+    E.g. Ülo õe äi -> ulo oe ai
     """
     replacements = [
         ("ä", "a"),
