@@ -1,3 +1,13 @@
+# Project specific
+log/
+.wdm/
+_TODO
+cf_requests.py
+control_port_password
+Dockerfile
+sample_response.txt
+selenium_request.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
