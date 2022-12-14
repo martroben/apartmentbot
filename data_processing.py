@@ -14,9 +14,9 @@ n_rooms: int
 area_m2: float
 price: float
 construction_year: int
-date_added: float (epoch time)
+date_listed: float (epoch time)
 date_scraped: float (epoch time)
-date_removed: float (epoch time)
+date_unlisted: float (epoch time)
 
 Imported modules:
 csv
@@ -32,6 +32,7 @@ import re
 import bs4.element
 import time
 from calendar import timegm
+import logging
 
 
 class Listing:
@@ -50,9 +51,9 @@ class Listing:
         self.area_m2: float = float()
         self.price: float = float()
         self.construction_year: int = int()
-        self.date_added: float = float()
+        self.date_listed: float = float()
         self.date_scraped: float = float()
-        self.date_removed: float = float()
+        self.date_unlisted: float = float()
 
 def normalize_string(string: str) -> str:
     """
@@ -86,17 +87,17 @@ def combine_street_address(street: str, house_number: (str,int), apartment_numbe
     return street_house_apartment
 
 
-def c24_get_listing_details(listing: dict) -> dict:
+def c24_get_listing_details(data: dict) -> Listing:
     """
     Extracts values from a single c24 website listing item.
 
-    :param listing: json dict from c24 API call
-    :return: dict with main listing info
+    :param data: json dict from c24 API call
+    :return: Listing with listing info
     """
-    details = dict()
-    details["id"] = listing["id"]
-    details["portal"] = config.C24_INDICATOR
-    details["active"] = 1
+    listing = Listing()
+    listing.portal = config.C24_INDICATOR
+    listing.active = 1
+    listing.id = data["id"]
 
     # True url example from inspection:
     # https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-kopli-tn/2960653
@@ -111,14 +112,14 @@ def c24_get_listing_details(listing: dict) -> dict:
     url_type_indication = "apartments-for-sale"
     try:
         url_location_components = [
-            listing["address"]["parish"]["name"],
-            listing["address"]["city"]["name"],
-            listing["address"]["street"]["name"]]
+            data["address"]["parish"]["name"],
+            data["address"]["city"]["name"],
+            data["address"]["street"]["name"]]
         url_location_indication = "-".join([normalize_string(string) for string in url_location_components]).replace(" ", "-")
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to produce legit location indication for {str(details)}: {err}")
+        logging.warning(f"{type(err)} error occurred while trying to produce legit location indication for {str(listing)}: {err}")
         url_location_indication = ""
-    details["url"] = "/".join([url_base, url_type_indication, url_location_indication, listing["friendly_id"]])
+    listing.url = "/".join([url_base, url_type_indication, url_location_indication, data["friendly_id"]])
 
     # True image url from inspection:
     # https://c24ee.img-bcg.eu/object/11/1468/1096481468.jpg
@@ -126,126 +127,116 @@ def c24_get_listing_details(listing: dict) -> dict:
     # It seems that {fmt:em} determines different sizes and crop formats for the image. Accepted values: 10-24
     # Using "11" as {fmt:em} value in this script
     image_url_fmt_em = "11"
-    details["image_url"] = listing["main_image"]["url"].replace("{fmt:em}", image_url_fmt_em)
+    listing.image_url = data["main_image"]["url"].replace("{fmt:em}", image_url_fmt_em)
 
     # Combine address to single string
-    apartment_number = listing["address"]["apartment_number"]
-    house_number = listing["address"]["house_number"]
-    street = listing["address"]["street"]["name"]
-    city = listing["address"]["city"]["name"]
-    parish = listing["address"]["parish"]["name"]
-    county = listing["address"]["county"]["name"]
+    apartment_number = data["address"]["apartment_number"]
+    house_number = data["address"]["house_number"]
+    street = data["address"]["street"]["name"]
+    city = data["address"]["city"]["name"]
+    parish = data["address"]["parish"]["name"]
+    county = data["address"]["county"]["name"]
     street_house_apartment = combine_street_address(street, house_number, apartment_number)
-    details["address"] = f"{county}, {parish}, {city}, {street_house_apartment}"
-    details["city"] = city
-    details["street"] = street
-    details["house_number"] = house_number
-    details["apartment_number"] = apartment_number
+    listing.address = f"{county}, {parish}, {city}, {street_house_apartment}"
+    listing.city = city
+    listing.street = street
+    listing.house_number = house_number
+    listing.apartment_number = apartment_number
 
-    details["n_rooms"] = int(listing["room_count"])
-    details["area_m2"] = float(listing["property_size"])
-    details["price"] = float(listing["price"])
-    details["construction_year"] = int(listing["attributes"].get("construction_year", 0))
+    listing.n_rooms = int(data["room_count"])
+    listing.area_m2 = float(data["property_size"])
+    listing.price = float(data["price"])
+    listing.construction_year = int(data["attributes"].get("construction_year", 0))
     # Using epoch time
-    details["date_added"] = timegm(time.strptime(listing["date_published"], "%Y-%m-%dT%H:%M:%S%z"))
-    details["date_scraped"] = time.time()
-    details["date_removed"] = float()
+    listing.date_listed = timegm(time.strptime(data["date_published"], "%Y-%m-%dT%H:%M:%S%z"))
+    listing.date_scraped = time.time()
 
-    return details
+    return listing
 
 
-def kv_get_listing_details(listing: bs4.element.Tag) -> dict:
+def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     """
     Extracts values from a single kv website listing item.
 
-    :param listing: bs4.element.Tag object - listing item (tag article) scraped from kv website
-    :return: dict with main listing info
+    :param data: bs4.element.Tag object - listing item (tag article) scraped from kv website
+    :return: Listing with listing info
     """
     area_pattern = re.compile(r"\d+\.?\d*")  # Get only the numeric part of the area
     price_pattern = re.compile(r"\d+")  # Get only the numeric parts of the price, join findall results
 
-    details = {}
+    listing = Listing()
     # Get id
     try:
-        details["id"] = listing["data-object-id"]
+        listing.id = data["data-object-id"]
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get id for {str(details)}: {err}")
-        details["id"] = str()
+        logging.warning(f"{type(err)} error occurred while trying to get id for {str(listing)}: {err}")
 
-    details["portal"] = config.KV_INDICATOR
-    details["active"] = 1
+    listing.portal = config.KV_INDICATOR
+    listing.active = 1
 
     # Get url
     try:
-        details["url"] = config.KV_BASE_URL + listing["data-object-url"]
+        listing.url = config.KV_BASE_URL + data["data-object-url"]
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get url for {str(details)}: {err}")
-        details["url"] = str()
+        logging.warning(f"{type(err)} error occurred while trying to get url for {str(listing)}: {err}")
 
     # Get image url
     try:
-        media = listing.find("div", {"class": "media"})
-        details["image_url"] = media.find("img")["data-src"]
+        media = data.find("div", {"class": "media"})
+        listing.image_url = media.find("img")["data-src"]
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get image url for {str(details)}: {err}")
-        details["image_url"] = str()
+        logging.warning(f"{type(err)} error occurred while trying to get image url for {str(details)}: {err}")
 
     # Get address
     try:
-        address_object = listing.find("div", {"class": "description"})
+        address_object = data.find("div", {"class": "description"})
         address_string = address_object.find_all("a", class_=False)
-        details["address"] = address_string[0].string.strip()
+        listing.address = address_string[0].string.strip()
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get address for {str(details)}: {err}")
-        details["address"] = str()
+        logging.warning(f"{type(err)} error occurred while trying to get address for {str(listing)}: {err}")
 
-    parsed_address = kv_parse_address(details["address"])
-    details["city"] = parsed_address["city"]
-    details["street"] = parsed_address["street"]
-    details["house_number"] = parsed_address["house_number"]
-    details["apartment_number"] = parsed_address["apartment_number"]
+    parsed_address = kv_parse_address(listing.address)
+    listing.city = parsed_address["city"]
+    listing.street = parsed_address["street"]
+    listing.house_number = parsed_address["house_number"]
+    listing.apartment_number = parsed_address["apartment_number"]
 
     # Get n_rooms
     try:
-        n_rooms = listing.find("div", {"class": "rooms"})
-        details["n_rooms"] = int(n_rooms.string.strip())
+        n_rooms = data.find("div", {"class": "rooms"})
+        listing.n_rooms = int(n_rooms.string.strip())
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get the number of rooms for {str(details)}: {err}")
-        details["n_rooms"] = int()
+        logging.warning(f"{type(err)} error occurred while trying to get the number of rooms for {str(listing)}: {err}")
 
     # Get area
     try:
-        area_m2 = listing.find("div", {"class": "area"})
+        area_m2 = data.find("div", {"class": "area"})
         area_numeric = area_pattern.search(area_m2.string).group()
-        details["area_m2"] = float(area_numeric)
+        listing.area_m2 = float(area_numeric)
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get area (m2) for {str(details)}: {err}")
-        details["area_m2"] = float()
+        logging.warning(f"{type(err)} error occurred while trying to get area (m2) for {str(listing)}: {err}")
 
     # Get price
     try:
-        price_object = listing.find("div", {"class": "price"})
+        price_object = data.find("div", {"class": "price"})
         for child in price_object.children:
             # Extract the element that has no tag and is not a single character
             if isinstance(child, bs4.element.NavigableString) and len(child.text) > 1:
                 price_string = "".join(price_pattern.findall(child.text))
-                details["price_eur"] = float(price_string)
+                listing.price_eur = float(price_string)
     except Exception as err:
-        print(f"{type(err)} error occurred while trying to get the price for {str(details)}: {err}")
-        details["price_eur"] = float()
+        logging.warning(f"{type(err)} error occurred while trying to get the price for {str(listing)}: {err}")
 
     # Get construction year
     construction_year_pattern = re.compile(r"ehitusaasta\s*(\d{4})")
-    object_excerpts = listing.find_all("p", {"class": "object-excerpt"})
+    object_excerpts = data.find_all("p", {"class": "object-excerpt"})
     construction_year = [construction_year_pattern.findall(excerpt.text) for excerpt in object_excerpts]
     construction_year = [int(item[0]) for item in construction_year if len(item) != 0]
-    details["construction_year"] = construction_year[0] if len(construction_year) != 0 else int()
+    listing.construction_year = construction_year[0] if len(construction_year) != 0 else int()
 
-    details["date_added"] = float()
-    details["date_scraped"] = time.time()
-    details["date_removed"] = float()
+    listing.date_scraped = time.time()
 
-    return details
+    return listing
 
 
 def separate_listings_by_portal(listings: list) -> dict:
@@ -267,7 +258,7 @@ def separate_listings_by_portal(listings: list) -> dict:
 
 def kv_parse_address(address: str) -> dict:
     """
-    Extract street, house and apartment from the full address string and parses them in a dict.
+    Extracts street, house and apartment from the full address string and parses them in a dict.
 
     :param address: Address string scraped from kv.
     :return: A dict with keys "city", "street", "house_number" and "apartment_number".
@@ -326,6 +317,6 @@ def kv_parse_address(address: str) -> dict:
         if len(missing_keys) > 1:
             raise UserWarning(f"Couldn't parse address elements: {', '.join(missing_keys)}")
     except UserWarning as warning:
-        print(f"WARNING, while trying to parse address '{address}': {warning}.")
+        logging.warning(f"WARNING, while trying to parse address '{address}': {warning}.")
 
     return address_dict
