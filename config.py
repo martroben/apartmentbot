@@ -1,7 +1,7 @@
 
-STORAGE_DIR: str = "/apartment_bot"
-LOG_FOLDER: str = "/media/mart/Data/martroben/Projects/Python/apartment_bot/apartment_bot_py/log"
-# f"{STORAGE_DIR}/log"
+VOLUME_MOUNT_DIR: str = "/apartment_bot"
+LOG_DIR: str = "/media/mart/Data/martroben/Projects/Python/apartment_bot/apartment_bot_py/log"
+# f"{VOLUME_MOUNT_DIR}/log"
 TOR_TORRC_PATH: str = "/etc/tor/torrc"
 TOR_PROCESS_NAME: str = "tor"
 TOR_CONTROL_PORT_PASSWORD: str               # Set by tor_operations.setup_tor() function
@@ -12,6 +12,7 @@ MAX_REQUEST_ARCHIVE_SIZE_MB: float = 5
 C24_INDICATOR: str = "c24"
 KV_INDICATOR: str = "kv"
 REQUESTS_ARCHIVE_DIR: str = "requests_archive"
+# f"{VOLUME_MOUNT_DIR}/requests_archive"
 KV_BASE_URL: str = "https://www2.kv.ee"
 C24_BASE_URL: str = "https://m-api.city24.ee/et_EE/search/realties"
 SQL_LISTING_TABLE_NAME: str = "listing"

@@ -15,11 +15,11 @@ import time
 # Start logging #
 #################
 
-if not os.path.exists(config.LOG_FOLDER):
-    os.makedirs(config.LOG_FOLDER)
+if not os.path.exists(config.LOG_DIR):
+    os.makedirs(config.LOG_DIR)
 
 logging.basicConfig(
-    filename= f"{config.LOG_FOLDER}/{date.today().strftime('%Y-%m-%d')}.log",
+    filename= f"{config.LOG_DIR}/{date.today().strftime('%Y-%m-%d')}.log",
     format="{asctime}|{funcName}|{levelname}:{message}",
     style="{",
     level=logging.DEBUG)
@@ -61,17 +61,17 @@ scraped_listings = c24_listings + kv_listings
 
 # Create necessary folder structure in storage location
 for portal_dir in responses.keys():
-    portal_dir_path = os.path.join(config.STORAGE_DIR, portal_dir)
+    portal_dir_path = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir)
     file_mgmt.check_dir_structure(portal_dir_path)
 
 # Save request data
 for portal_dir, response in responses.items():
-    portal_archive_dir_path = os.path.join(config.STORAGE_DIR, portal_dir, config.REQUESTS_ARCHIVE_DIR)
+    portal_archive_dir_path = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir, config.REQUESTS_ARCHIVE_DIR)
     file_mgmt.save_requests_to_txt(response, portal_archive_dir_path)
 
 # Check maximum allowed size and cull request archives if necessary
 for portal_dir in responses.keys():
-    portal_archive_dir_path = os.path.join(config.STORAGE_DIR, portal_dir, config.REQUESTS_ARCHIVE_DIR)
+    portal_archive_dir_path = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir, config.REQUESTS_ARCHIVE_DIR)
     while file_mgmt.get_dir_size_mb(portal_archive_dir_path) > config.MAX_REQUEST_ARCHIVE_SIZE_MB:
         file_mgmt.remove_oldest_file(portal_archive_dir_path)
 
@@ -82,7 +82,7 @@ for portal_dir in responses.keys():
 
 active_listings_paths = []
 for portal_dir in responses.keys():
-    portal_active_listings_path = os.path.join(config.STORAGE_DIR, portal_dir, config.ACTIVE_LISTINGS_FILENAME)
+    portal_active_listings_path = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir, config.ACTIVE_LISTINGS_FILENAME)
     active_listings_paths.append(portal_active_listings_path)
 
 active_listings = []
@@ -115,12 +115,12 @@ expired_listings_by_portal = data_processing.separate_listings_by_portal(expired
 
 # Save active listings
 for portal_dir, data in scraped_listings_by_portal.items():
-    active_listings_paths = os.path.join(config.STORAGE_DIR, portal_dir, config.ACTIVE_LISTINGS_FILENAME)
+    active_listings_paths = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir, config.ACTIVE_LISTINGS_FILENAME)
     file_mgmt.write_data_csv(data, active_listings_paths, replace=True)
 
 # Save expired listings
 for portal_dir, data in expired_listings_by_portal.items():
-    expired_listings_paths = os.path.join(config.STORAGE_DIR, portal_dir, config.EXPIRED_LISTINGS_FILENAME)
+    expired_listings_paths = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir, config.EXPIRED_LISTINGS_FILENAME)
     file_mgmt.write_data_csv(data, expired_listings_paths)
 
 
