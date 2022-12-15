@@ -80,7 +80,7 @@ def combine_street_address(street: str, house_number: (str,int), apartment_numbe
     :param street:
     :param house_number:
     :param apartment_number:
-    :return:
+    :return: String with input elements combined to an address.
     """
     house_apartment = "-".join([element for element in [house_number, apartment_number] if element not in [None, ""]])
     street_house_apartment = " ".join([element for element in [street, house_apartment] if element not in [None, ""]])
