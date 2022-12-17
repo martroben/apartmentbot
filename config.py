@@ -16,6 +16,7 @@ REQUESTS_ARCHIVE_DIR: str = "requests_archive"
 KV_BASE_URL: str = "https://www2.kv.ee"
 C24_BASE_URL: str = "https://m-api.city24.ee/et_EE/search/realties"
 SQL_LISTING_TABLE_NAME: str = "listing"
+SQL_DATABASE_PATH: str = ":memory:"
 
 # Gives error 451 (rejected for legal reasons) when using python requests module's default header.
 USER_AGENT_HEADER: str = "curl/7.81.0"

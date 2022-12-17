@@ -3,6 +3,10 @@ import sqlite3
 from data_processing import Listing
 import config
 import logging
+import os
+import re
+from bs4 import BeautifulSoup
+import data_processing
 
 
 def log_exceptions(function):
@@ -56,16 +60,17 @@ def sql_table_exists(name: str, connection: sqlite3.Connection) -> bool:
 
 
 @log_exceptions
-def sql_create_listing_table(connection: sqlite3.Connection) -> None:
+def sql_create_listing_table(table: str, connection: sqlite3.Connection) -> None:
     """
     Creates table for listings to SQLite, using config.SQL_LISTING_TABLE_NAME as table name
 
+    :param table: SQL listings table name
     :param connection: SQL connection object.
     :return: None
     """
     listing_columns_types = [key + " " + get_sqlite_data_type(value) for key, value in vars(Listing()).items()]
     listing_columns_types_string = ",\n\t".join(listing_columns_types)
-    create_table_command = f"CREATE TABLE {config.SQL_LISTING_TABLE_NAME} (\n\t{listing_columns_types_string}\n);"
+    create_table_command = f"CREATE TABLE {table} (\n\t{listing_columns_types_string}\n);"
 
     sql_cursor = connection.cursor()
     sql_cursor.execute(create_table_command)
@@ -103,7 +108,41 @@ def sql_insert_listing(listing: Listing, table: str, connection: sqlite3.Connect
     return
 
 
-sql_connection = sqlite3.connect(":memory:")
-sql_table_exists(config.SQL_LISTING_TABLE_NAME, sql_connection)
-sql_create_listing_table(sql_connection)
-sql_insert_listing(Listing(), config.SQL_LISTING_TABLE_NAME, sql_connection)
+
+with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
+    response = sample_response.read()
+
+kv_listings = []
+scraper = BeautifulSoup(response, "html.parser")
+
+# Extract the number of total listings from first page
+n_total_listings_pattern = re.compile(r'<span\s*class="large\s*stronger">.*?(\d+)\s*</span>')
+n_total_listings_match = n_total_listings_pattern.search(response)
+n_total_listings = int(n_total_listings_match.group(1)) if n_total_listings_match is not None else None
+
+kv_listings_raw = scraper.find_all("article")
+kv_listings += [data_processing.kv_get_listing_details(item) for item in kv_listings_raw]
+
+sql_connection = sqlite3.connect(config.SQL_DATABASE_PATH)
+if not sql_table_exists(config.SQL_LISTING_TABLE_NAME, sql_connection):
+    sql_create_listing_table(config.SQL_LISTING_TABLE_NAME, sql_connection)
+
+for listing in kv_listings:
+    sql_insert_listing(
+        listing=listing,
+        table=config.SQL_LISTING_TABLE_NAME,
+        connection=sql_connection)
+
+
+get_listings_command = f"SELECT * FROM {config.SQL_LISTING_TABLE_NAME}"
+connection = sql_connection
+sql_cursor = connection.cursor()
+listings = sql_cursor.execute(get_listings_command).fetchall()
+listing_column_names = [item[0] for item in sql_cursor.execute(get_listings_command).description]
+
+listing_dicts = list()
+for listing in listings:
+    listing_dict = {key:value for key, value in zip(listing_column_names, listing)}
+    listing_dicts += [listing_dict]
+
+

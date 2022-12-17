@@ -35,25 +35,63 @@ from calendar import timegm
 import logging
 
 
-class Listing:
+class Test:
     def __init__(self):
-        self.id: str = str()
-        self.portal: str = str()
-        self.active: int = int()
-        self.url: str = str()
-        self.image_url: str = str()
-        self.address: str = str()
-        self.city: str = str()
-        self.street: str = str()
-        self.house_number: str = str()
-        self.apartment_number: str = str()
-        self.n_rooms: int = int()
-        self.area_m2: float = float()
-        self.price: float = float()
-        self.construction_year: int = int()
-        self.date_listed: float = float()
-        self.date_scraped: float = float()
-        self.date_unlisted: float = float()
+        self.x = 1
+
+class Listing:
+    """
+    Attributes:
+    - :class:`str` name
+    """
+
+    id = str()
+    portal = str()
+    active = int()
+    url = str()
+    image_url = str()
+    address = str()
+    city = str()
+    street = str()
+    house_number = str()
+    apartment_number = str()
+    n_rooms = int()
+    area_m2 = float()
+    price_eur = float()
+    construction_year = int()
+    date_listed = float()
+    date_scraped = float()
+    date_unlisted = float()
+
+    def __setattr__(self, key, value):
+        """Check if variable is allowed and typecast it to the type specified in allowed_variables"""
+        if key in vars(self) or key == "id":
+            value = type(vars(self)[key])(value)
+            super().__setattr__(key, value)
+        else:
+            try:
+                raise UserWarning(f"'{key}' is not a variable of class {type(self).__name__}. Value not inserted!")
+            except UserWarning as warning:
+                log_string = f"While inserting '{key}={value}': {warning}"
+                logging.warning(log_string)
+
+    def __init__(self):
+        self.name = None
+        self.id = 123
+        # """Populate empty type values for all variable names in allowed_variables"""
+        # for key, value in self.allowed_variables.items():
+        #     setattr(self, key, value())
+
+    def make_from_dict(self, listing_dict):
+        """Set values of variables from a dict"""
+        for key, value in listing_dict.items():
+            setattr(self, key, value)
+        return self
+
+    def __str__(self):
+        return f"{self.id} | {self.address}"
+
+Listing().name
 
 def normalize_string(string: str) -> str:
     """
@@ -168,8 +206,10 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     # Get id
     try:
         listing.id = data["data-object-id"]
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get id for {str(listing)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get id for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     listing.portal = config.KV_INDICATOR
     listing.active = 1
@@ -177,23 +217,29 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     # Get url
     try:
         listing.url = config.KV_BASE_URL + data["data-object-url"]
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get url for {str(listing)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get url for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     # Get image url
     try:
         media = data.find("div", {"class": "media"})
         listing.image_url = media.find("img")["data-src"]
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get image url for {str(details)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get image url for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     # Get address
     try:
         address_object = data.find("div", {"class": "description"})
         address_string = address_object.find_all("a", class_=False)
         listing.address = address_string[0].string.strip()
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get address for {str(listing)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get address for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     parsed_address = kv_parse_address(listing.address)
     listing.city = parsed_address["city"]
@@ -205,16 +251,20 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     try:
         n_rooms = data.find("div", {"class": "rooms"})
         listing.n_rooms = int(n_rooms.string.strip())
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get the number of rooms for {str(listing)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get the number of rooms for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     # Get area
     try:
         area_m2 = data.find("div", {"class": "area"})
         area_numeric = area_pattern.search(area_m2.string).group()
         listing.area_m2 = float(area_numeric)
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get area (m2) for {str(listing)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get area (m2) for {str(listing)}: {exception}"
+        logging.warning(log_string)
 
     # Get price
     try:
@@ -224,8 +274,10 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
             if isinstance(child, bs4.element.NavigableString) and len(child.text) > 1:
                 price_string = "".join(price_pattern.findall(child.text))
                 listing.price_eur = float(price_string)
-    except Exception as err:
-        logging.warning(f"{type(err)} error occurred while trying to get the price for {str(listing)}: {err}")
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get price for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     # Get construction year
     construction_year_pattern = re.compile(r"ehitusaasta\s*(\d{4})")
@@ -317,6 +369,6 @@ def kv_parse_address(address: str) -> dict:
         if len(missing_keys) > 1:
             raise UserWarning(f"Couldn't parse address elements: {', '.join(missing_keys)}")
     except UserWarning as warning:
-        logging.warning(f"WARNING, while trying to parse address '{address}': {warning}.")
+        logging.warning(f"{type(warning).__name__} occurred while trying to parse address '{address}': {warning}.")
 
     return address_dict

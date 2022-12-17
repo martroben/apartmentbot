@@ -35,8 +35,6 @@ with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
 kv_listings = []
 scraper = BeautifulSoup(response, "html.parser")
 
-# <span *class="large *stronger">.*(\d+)\s*$</span>
-
 n_total_listings_pattern = re.compile(r'<span\s*class="large\s*stronger">.*?(\d+)\s*</span>')
 n_total_listings_match = n_total_listings_pattern.search(response)
 n_total_listings = int(n_total_listings_match.group(1)) if n_total_listings_match is not None else None
