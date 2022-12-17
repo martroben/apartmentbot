@@ -35,15 +35,19 @@ from calendar import timegm
 import logging
 
 
-class Test:
+class Test():
+    x = int()
+    y = str()
+    def __setattr__(self, key, value):
+        if key in self.__class__.__dict__:
+            super().__setattr__(key, value)
+        else:
+            print("ei!")
     def __init__(self):
         self.x = 1
 
+
 class Listing:
-    """
-    Attributes:
-    - :class:`str` name
-    """
 
     id = str()
     portal = str()
@@ -64,9 +68,9 @@ class Listing:
     date_unlisted = float()
 
     def __setattr__(self, key, value):
-        """Check if variable is allowed and typecast it to the type specified in allowed_variables"""
-        if key in vars(self) or key == "id":
-            value = type(vars(self)[key])(value)
+        """Check if variable is allowed and typecast it to the correct type."""
+        if key in self.__class__.__dict__:
+            value = type(self.__class__.__dict__[key])(value)
             super().__setattr__(key, value)
         else:
             try:
@@ -74,13 +78,6 @@ class Listing:
             except UserWarning as warning:
                 log_string = f"While inserting '{key}={value}': {warning}"
                 logging.warning(log_string)
-
-    def __init__(self):
-        self.name = None
-        self.id = 123
-        # """Populate empty type values for all variable names in allowed_variables"""
-        # for key, value in self.allowed_variables.items():
-        #     setattr(self, key, value())
 
     def make_from_dict(self, listing_dict):
         """Set values of variables from a dict"""
@@ -91,7 +88,6 @@ class Listing:
     def __str__(self):
         return f"{self.id} | {self.address}"
 
-Listing().name
 
 def normalize_string(string: str) -> str:
     """
