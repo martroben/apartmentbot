@@ -47,6 +47,18 @@ class Test():
         self.x = 1
 
 
+def get_class_variables(class_object: (object, str)) -> dict:
+    """
+    Helper function to get class variables (without dunder variables and functions.)
+
+    :param class_object: Class object or object name string
+    :return: dict with names and values of class variables
+    """
+    if isinstance(class_object, str):
+        class_object = eval(class_object)
+    return {key: value for key, value in class_object.__dict__.items() if not key.startswith("__") and not callable(value)}
+
+
 class Listing:
 
     id = str()
@@ -78,6 +90,12 @@ class Listing:
             except UserWarning as warning:
                 log_string = f"While inserting '{key}={value}': {warning}"
                 logging.warning(log_string)
+
+    def __init__(self):
+        # Copy class variable default values to instance variables (so that vars() would work).
+        class_variables = get_class_variables(self.__class__)
+        for key, value in class_variables.items():
+            setattr(self, key, value)
 
     def make_from_dict(self, listing_dict):
         """Set values of variables from a dict"""

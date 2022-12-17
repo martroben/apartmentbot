@@ -108,7 +108,6 @@ def sql_insert_listing(listing: Listing, table: str, connection: sqlite3.Connect
     return
 
 
-
 with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
     response = sample_response.read()
 
@@ -145,4 +144,7 @@ for listing in listings:
     listing_dict = {key:value for key, value in zip(listing_column_names, listing)}
     listing_dicts += [listing_dict]
 
+lst = [Listing().make_from_dict(listing_dict) for listing_dict in listing_dicts]
 
+for item in lst:
+    print(item)
