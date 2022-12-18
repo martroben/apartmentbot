@@ -95,6 +95,19 @@ class Listing:
     def __str__(self):
         return f"{self.id} | {self.address}"
 
+    def __eq__(self, other):
+        """
+        If the compared to another Listing object, first compares id-s.
+        If these do not match, compares portal, address, area_m2 and price_eur variables.
+        """
+        if isinstance(other, Listing):
+            if self.id == other.id:
+                return True
+            variables_match = (self.portal, self.address, self.area_m2, self.price_eur) == \
+                              (other.portal, other.address, other.area_m2, other.price_eur)
+            return variables_match
+        return NotImplemented
+
 
 def normalize_string(string: str) -> str:
     """

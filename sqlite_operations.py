@@ -167,5 +167,3 @@ existing_active_listings = [Listing().make_from_dict(listing_dict) for listing_d
 
 for listing in existing_active_listings:
     print(listing)
-
-
