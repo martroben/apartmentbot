@@ -103,10 +103,9 @@ def sql_insert_listing(listing: Listing, table: str, connection: sqlite3.Connect
     sql_cursor = connection.cursor()
     try:
         sql_cursor.execute(insert_listing_command)
-        connection.commit()
-    except sqlite3.OperationalError as sql_error:
+    except sqlite3.Error as sql_error:
         log_string = f"In function {sql_insert_listing.__name__}, {type(sql_error).__name__} error occurred " + \
-                     f"with listing '{listing.address}': {sql_error}"
+                     f"with listing {listing}: {sql_error}"
         print(log_string)
     return
 
@@ -134,6 +133,24 @@ def sql_read_data(table: str, connection: sqlite3.Connection, where: (None, str)
     return data_rows
 
 
+@log_exceptions
+def sql_deactivate_id(listing_id: str, table: str, connection: sqlite3.Connection, activate: bool = False) -> None:
+    """
+    Sets the 'active' column value for a row in SQL table by listing id.
+
+    :param listing_id: id of the listing that is going to be changed.
+    :param table: Listing table name.
+    :param connection: SLQ connection object.
+    :param activate: Set to True if a listing needs to be activated instead of deactivated.
+    :return: None
+    """
+    active = 1 if activate else 0
+    update_table_command = f"UPDATE {table} SET active = {active} WHERE id = {listing_id}"
+    sql_cursor = connection.cursor()
+    sql_cursor.execute(update_table_command)
+    return
+
+
 with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
     response = sample_response.read()
 
@@ -158,6 +175,8 @@ for listing in kv_listings:
         table=config.SQL_LISTING_TABLE_NAME,
         connection=sql_connection)
 
+sql_connection.commit()
+
 sql_existing_active_listings = sql_read_data(
     table=config.SQL_LISTING_TABLE_NAME,
     connection=sql_connection,
@@ -165,5 +184,9 @@ sql_existing_active_listings = sql_read_data(
 
 existing_active_listings = [Listing().make_from_dict(listing_dict) for listing_dict in sql_existing_active_listings]
 
-for listing in existing_active_listings:
-    print(listing)
+sql_deactivate_id(
+    listing_id="3493123",
+    table=config.SQL_LISTING_TABLE_NAME,
+    connection=sql_connection)
+
+sql_connection.commit()
