@@ -69,8 +69,10 @@ def sql_create_listing_table(table: str, connection: sqlite3.Connection) -> None
     :param connection: SQL connection object.
     :return: None
     """
-    listing_columns_types = [key + " " + get_sqlite_data_type(value) for key, value in vars(Listing()).items()]
-    listing_columns_types_string = ",\n\t".join(listing_columns_types)
+    listing_columns_types = {key: get_sqlite_data_type(value) for key, value in vars(Listing()).items()}
+    # Constrain id column to have non null unique values
+    listing_columns_types["id"] = f"{listing_columns_types['id']} PRIMARY KEY NOT NULL"
+    listing_columns_types_string = ",\n\t".join([f"{key} {value}" for key, value in listing_columns_types.items()])
     create_table_command = f"CREATE TABLE {table} (\n\t{listing_columns_types_string}\n);"
 
     sql_cursor = connection.cursor()
