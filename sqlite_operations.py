@@ -108,6 +108,28 @@ def sql_insert_listing(listing: Listing, table: str, connection: sqlite3.Connect
     return
 
 
+def sql_read_data(table: str, connection: sqlite3.Connection, where: (None, str) = None) -> list[dict]:
+    """
+    Get data from a SQL table.
+
+    :param table: SQL table name.
+    :param connection: SQL connection.
+    :param where: SQL WHERE filter string
+    :return: A list of column_name:value dicts.
+    """
+    get_data_command = f"SELECT * FROM {table};" if where is None else f"SELECT * FROM {table} WHERE {where};"
+    sql_cursor = connection.cursor()
+    data = sql_cursor.execute(get_data_command).fetchall()
+    data_column_names = [item[0] for item in sql_cursor.execute(get_data_command).description]
+
+    data_rows = list()
+    for row in data:
+        data_row = {key: value for key, value in zip(data_column_names, row)}
+        data_rows += [data_row]
+
+    return data_rows
+
+
 with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
     response = sample_response.read()
 
@@ -132,19 +154,12 @@ for listing in kv_listings:
         table=config.SQL_LISTING_TABLE_NAME,
         connection=sql_connection)
 
+sql_existing_active_listings = sql_read_data(
+    table=config.SQL_LISTING_TABLE_NAME,
+    connection=sql_connection,
+    where="active = 1")
 
-get_listings_command = f"SELECT * FROM {config.SQL_LISTING_TABLE_NAME}"
-connection = sql_connection
-sql_cursor = connection.cursor()
-listings = sql_cursor.execute(get_listings_command).fetchall()
-listing_column_names = [item[0] for item in sql_cursor.execute(get_listings_command).description]
+existing_active_listings = [Listing().make_from_dict(listing_dict) for listing_dict in sql_existing_active_listings]
 
-listing_dicts = list()
-for listing in listings:
-    listing_dict = {key:value for key, value in zip(listing_column_names, listing)}
-    listing_dicts += [listing_dict]
-
-lst = [Listing().make_from_dict(listing_dict) for listing_dict in listing_dicts]
-
-for item in lst:
-    print(item)
+for listing in existing_active_listings:
+    print(listing)
