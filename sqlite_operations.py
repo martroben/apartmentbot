@@ -8,6 +8,7 @@ import re
 from bs4 import BeautifulSoup
 import data_processing
 import hashlib
+import time
 
 
 def log_exceptions(function):
@@ -120,7 +121,10 @@ def sql_read_data(table: str, connection: sqlite3.Connection, where: (None, str)
     :param where: Optional SQL WHERE filtering clause as string. E.g. "column = value" or "column IN (1,2,3)".
     :return: A list of column_name:value dicts.
     """
-    get_data_command = f"SELECT * FROM {table};" if where is None else f"SELECT * FROM {table} WHERE {where};"
+    if where is None:
+        get_data_command = f"SELECT * FROM {table};"
+    else:
+        get_data_command = f"SELECT * FROM {table} WHERE {where};"
     sql_cursor = connection.cursor()
     data = sql_cursor.execute(get_data_command).fetchall()
     data_column_names = [item[0] for item in sql_cursor.execute(get_data_command).description]
@@ -144,8 +148,12 @@ def sql_deactivate_id(listing_id: str, table: str, connection: sqlite3.Connectio
     :param activate: Set to True if a listing needs to be activated instead of deactivated.
     :return: None
     """
-    active = 1 if activate else 0
-    update_table_command = f"UPDATE {table} SET active = {active} WHERE id = {listing_id}"
+    if activate:
+        update_table_command = f"UPDATE {table} SET active = {int(activate)} WHERE id = {listing_id}"
+    else:
+        update_table_command = f"UPDATE {table} SET active = {int(activate)}, " \
+                               f"date_unlisted = {round(time.time(), 0)} WHERE id = {listing_id}"
+
     sql_cursor = connection.cursor()
     sql_cursor.execute(update_table_command)
     return
@@ -183,10 +191,15 @@ sql_existing_active_listings = sql_read_data(
     where="active = 1")
 
 existing_active_listings = [Listing().make_from_dict(listing_dict) for listing_dict in sql_existing_active_listings]
+scraped_listings = kv_listings[slice(0, len(kv_listings), 2)]
 
-sql_deactivate_id(
-    listing_id="3493123",
-    table=config.SQL_LISTING_TABLE_NAME,
-    connection=sql_connection)
+unlisted_listing_ids = [listing.id for listing in existing_active_listings if listing not in scraped_listings]
+new_listings = [listing for listing in scraped_listings if listing not in existing_active_listings]
+
+for listing_id in unlisted_listing_ids:
+    sql_deactivate_id(
+        listing_id=listing_id,
+        table=config.SQL_LISTING_TABLE_NAME,
+        connection=sql_connection)
 
 sql_connection.commit()

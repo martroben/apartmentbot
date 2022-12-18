@@ -216,7 +216,7 @@ def c24_get_listing_details(data: dict) -> Listing:
     listing.construction_year = int(data["attributes"].get("construction_year", 0))
     # Using epoch time
     listing.date_listed = timegm(time.strptime(data["date_published"], "%Y-%m-%dT%H:%M:%S%z"))
-    listing.date_scraped = time.time()
+    listing.date_scraped = round(time.time(), 0)
 
     # Get id
     try:
@@ -322,7 +322,7 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     construction_year = [int(item[0]) for item in construction_year if len(item) != 0]
     listing.construction_year = construction_year[0] if len(construction_year) != 0 else int()
 
-    listing.date_scraped = time.time()
+    listing.date_scraped = round(time.time(), 0)
 
     # Get id
     try:
