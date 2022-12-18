@@ -7,6 +7,7 @@ import os
 import re
 from bs4 import BeautifulSoup
 import data_processing
+import hashlib
 
 
 def log_exceptions(function):
@@ -108,13 +109,14 @@ def sql_insert_listing(listing: Listing, table: str, connection: sqlite3.Connect
     return
 
 
+@log_exceptions
 def sql_read_data(table: str, connection: sqlite3.Connection, where: (None, str) = None) -> list[dict]:
     """
     Get data from a SQL table.
 
     :param table: SQL table name.
     :param connection: SQL connection.
-    :param where: SQL WHERE filter string
+    :param where: Optional SQL WHERE filtering clause as string. E.g. "column = value" or "column IN (1,2,3)".
     :return: A list of column_name:value dicts.
     """
     get_data_command = f"SELECT * FROM {table};" if where is None else f"SELECT * FROM {table} WHERE {where};"
@@ -133,7 +135,6 @@ def sql_read_data(table: str, connection: sqlite3.Connection, where: (None, str)
 with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
     response = sample_response.read()
 
-kv_listings = []
 scraper = BeautifulSoup(response, "html.parser")
 
 # Extract the number of total listings from first page
@@ -141,6 +142,7 @@ n_total_listings_pattern = re.compile(r'<span\s*class="large\s*stronger">.*?(\d+
 n_total_listings_match = n_total_listings_pattern.search(response)
 n_total_listings = int(n_total_listings_match.group(1)) if n_total_listings_match is not None else None
 
+kv_listings = []
 kv_listings_raw = scraper.find_all("article")
 kv_listings += [data_processing.kv_get_listing_details(item) for item in kv_listings_raw]
 
@@ -163,3 +165,5 @@ existing_active_listings = [Listing().make_from_dict(listing_dict) for listing_d
 
 for listing in existing_active_listings:
     print(listing)
+
+

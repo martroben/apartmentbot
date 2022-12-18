@@ -33,18 +33,7 @@ import bs4.element
 import time
 from calendar import timegm
 import logging
-
-
-class Test():
-    x = int()
-    y = str()
-    def __setattr__(self, key, value):
-        if key in self.__class__.__dict__:
-            super().__setattr__(key, value)
-        else:
-            print("ei!")
-    def __init__(self):
-        self.x = 1
+import hashlib
 
 
 def get_class_variables(class_object: (object, str)) -> dict:
@@ -139,6 +128,20 @@ def combine_street_address(street: str, house_number: (str,int), apartment_numbe
     return street_house_apartment
 
 
+def generate_listing_id(listing: Listing) -> str:
+    """
+    Generates (hopefully unique) id based on listing address and area_m2
+
+    :param listing: Listing object
+    :return: 7-character ID starting with X
+    """
+    hash_length = 7
+    hash_seed = f"{str(listing.area_m2)} {listing.address}"
+    listing_hash = hashlib.shake_128(hash_seed.encode()).hexdigest(int(hash_length - 1 / 2))
+    listing_id = f"X{listing_hash}".upper()
+    return listing_id
+
+
 def c24_get_listing_details(data: dict) -> Listing:
     """
     Extracts values from a single c24 website listing item.
@@ -149,7 +152,6 @@ def c24_get_listing_details(data: dict) -> Listing:
     listing = Listing()
     listing.portal = config.C24_INDICATOR
     listing.active = 1
-    listing.id = data["id"]
 
     # True url example from inspection:
     # https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-kopli-tn/2960653
@@ -203,6 +205,20 @@ def c24_get_listing_details(data: dict) -> Listing:
     listing.date_listed = timegm(time.strptime(data["date_published"], "%Y-%m-%dT%H:%M:%S%z"))
     listing.date_scraped = time.time()
 
+    # Get id
+    try:
+        listing.id = data["id"]
+        if listing.id == "":
+            listing.id = generate_listing_id(listing)
+            raise UserWarning(f"Couldn't get id from scraped data. Assigned automatic id.")
+    except UserWarning as warning:
+        log_string = f"While trying to get id for {str(listing)}: {warning}"
+        logging.warning(log_string)
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get id for {str(listing)}: {exception}"
+        logging.exception(log_string)
+
     return listing
 
 
@@ -217,13 +233,6 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     price_pattern = re.compile(r"\d+")  # Get only the numeric parts of the price, join findall results
 
     listing = Listing()
-    # Get id
-    try:
-        listing.id = data["data-object-id"]
-    except Exception as exception:
-        log_string = f"{type(exception).__name__} occurred " + \
-                     f"while trying to get id for {str(listing)}: {exception}"
-        logging.exception(log_string)
 
     listing.portal = config.KV_INDICATOR
     listing.active = 1
@@ -301,6 +310,20 @@ def kv_get_listing_details(data: bs4.element.Tag) -> Listing:
     listing.construction_year = construction_year[0] if len(construction_year) != 0 else int()
 
     listing.date_scraped = time.time()
+
+    # Get id
+    try:
+        listing.id = data["data-object-id"]
+        if listing.id == "":
+            listing.id = generate_listing_id(listing)
+            raise UserWarning(f"Couldn't get id from scraped data. Assigned automatic id.")
+    except UserWarning as warning:
+        log_string = f"While trying to get id for {str(listing)}: {warning}"
+        logging.warning(log_string)
+    except Exception as exception:
+        log_string = f"{type(exception).__name__} occurred " + \
+                     f"while trying to get id for {str(listing)}: {exception}"
+        logging.exception(log_string)
 
     return listing
 
