@@ -3,6 +3,7 @@ import portal_requests
 import data_processing
 import file_mgmt
 import tor_operations
+import sqlite_operations
 
 from datetime import date
 import csv
@@ -10,6 +11,8 @@ import os.path
 from bs4 import BeautifulSoup
 import logging
 import time
+import re
+import sqlite3
 
 #################
 # Start logging #
@@ -74,6 +77,58 @@ for portal_dir in responses.keys():
     portal_archive_dir_path = os.path.join(config.VOLUME_MOUNT_DIR, portal_dir, config.REQUESTS_ARCHIVE_DIR)
     while file_mgmt.get_dir_size_mb(portal_archive_dir_path) > config.MAX_REQUEST_ARCHIVE_SIZE_MB:
         file_mgmt.remove_oldest_file(portal_archive_dir_path)
+
+
+
+####################
+# Save data to SQL #
+####################
+
+with open(f"{os.getcwd()}/sample_response.txt", "r") as sample_response:
+    response = sample_response.read()
+
+scraper = BeautifulSoup(response, "html.parser")
+
+# Extract the number of total listings from first page
+n_total_listings_pattern = re.compile(r'<span\s*class="large\s*stronger">.*?(\d+)\s*</span>')
+n_total_listings_match = n_total_listings_pattern.search(response)
+n_total_listings = int(n_total_listings_match.group(1)) if n_total_listings_match is not None else None
+
+kv_listings = []
+kv_listings_raw = scraper.find_all("article")
+kv_listings += [data_processing.kv_get_listing_details(item) for item in kv_listings_raw]
+
+sql_connection = sqlite3.connect(config.SQL_DATABASE_PATH)
+if not sqlite_operations.table_exists(config.SQL_LISTING_TABLE_NAME, sql_connection):
+    sqlite_operations.create_listing_table(config.SQL_LISTING_TABLE_NAME, sql_connection)
+
+for listing in kv_listings:
+    sqlite_operations.insert_listing(
+        listing=listing,
+        table=config.SQL_LISTING_TABLE_NAME,
+        connection=sql_connection)
+
+sql_connection.commit()
+
+sql_existing_active_listings = sqlite_operations.read_data(
+    table=config.SQL_LISTING_TABLE_NAME,
+    connection=sql_connection,
+    where="active = 1")
+
+existing_active_listings = [data_processing.Listing().make_from_dict(listing_dict) for listing_dict in sql_existing_active_listings]
+scraped_listings = kv_listings[slice(0, len(kv_listings), 2)]
+
+unlisted_listing_ids = [listing.id for listing in existing_active_listings if listing not in scraped_listings]
+new_listings = [listing for listing in scraped_listings if listing not in existing_active_listings]
+
+for listing_id in unlisted_listing_ids:
+    sqlite_operations.deactivate_id(
+        listing_id=listing_id,
+        table=config.SQL_LISTING_TABLE_NAME,
+        connection=sql_connection)
+
+sql_connection.commit()
+
 
 
 ##############################

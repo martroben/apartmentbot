@@ -14,9 +14,9 @@ n_rooms: int
 area_m2: float
 price: float
 construction_year: int
-date_listed: float (epoch time)
-date_scraped: float (epoch time)
-date_unlisted: float (epoch time)
+date_listed: float (epoch time) - round to full second
+date_scraped: float (epoch time) - round to full second
+date_unlisted: float (epoch time) - round to full second
 
 Imported modules:
 csv
@@ -27,7 +27,6 @@ timegm from calendar
 """
 import config
 
-import csv
 import re
 import bs4.element
 import time
