@@ -4,7 +4,9 @@ LOG_DIR: str = "/media/mart/Data/martroben/Projects/Python/apartment_bot/apartme
 # f"{VOLUME_MOUNT_DIR}/log"
 TOR_TORRC_PATH: str = "/etc/tor/torrc"
 TOR_PROCESS_NAME: str = "tor"
-TOR_CONTROL_PORT_PASSWORD: str               # Set by tor_operations.setup_tor() function
+TOR_PORT: int = 9050
+TOR_CONTROL_PORT: int = 9051
+TOR_CONTROL_PORT_PASSWORD: str = ""
 CHROME_VERSION: str = "108"
 ACTIVE_LISTINGS_FILENAME: str = "active_listings.csv"
 EXPIRED_LISTINGS_FILENAME: str = "expired_listings.csv"
