@@ -7,12 +7,13 @@ import os
 # import undetected_chromedriver as uc
 from time import sleep
 from urllib.error import ContentTooShortError
+import stem
 from stem.control import Controller
 import logging
 import socket
 
 
-def socket_available(host: str, port: int):
+def socket_available(host: str, port: int) -> bool:
     """
     Check if a socket accepts connections.
 
@@ -37,21 +38,22 @@ def tor_control_getinfo(keyword: str = "info/names", password: str = "") -> str:
     :return: String with info returned by the tor control GETINFO command.
     """
     try:
-        controller = Controller.from_port(port = config.TOR_CONTROL_PORT)
-        controller.authenticate(password = password)
-        response = controller.get_info(keyword)
-        controller.close()
-        return response
+        with Controller.from_port(port=config.TOR_CONTROL_PORT) as controller:
+            controller.authenticate(password=password)
+            response = controller.get_info(keyword)
+            controller.close()
+            return response
     except Exception as exception:
         log_string = f"While trying to GETINFO from tor control port with keyword '{keyword}', " \
                      f"{type(exception).__name__} occurred: {exception}"
         logging.exception(log_string)
 
 
-def check_tor_status():
+def check_tor_status() -> bool:
     """
     Check if tor is up.
-    First if tor control port accepts connections, second if tor GETINFO reports an active status.
+    Checks first if tor control port accepts connections,
+    second if tor GETINFO reports an active status.
 
     :return: True if tor is up, False otherwise.
     """
@@ -69,6 +71,67 @@ def check_tor_status():
 
 check_tor_status()
 
+
+import os
+import signal
+import psutil
+
+
+def get_pids(process_name: str) -> list[int]:
+    pids = [process.pid for process in psutil.process_iter(attrs=["name"])
+            if process.name().lower() == process_name.lower()]
+    return pids
+
+
+def kill_tor_process() -> None:
+    for pid in get_pids(config.TOR_PROCESS_NAME):
+        os.kill(pid, signal.SIGTERM)
+    return
+
+
+def tor_signal_control_port(signal, password=""):
+    try:
+        with Controller.from_port(port=config.TOR_CONTROL_PORT) as controller:
+            controller.authenticate(password=password)
+            controller.signal(stem.Signal.HUP)
+            return
+    except Exception as exception:
+        log_string = f"While trying to send a signal to tor control port, " \
+                     f"{type(exception).__name__} occurred: {exception}"
+        logging.exception(log_string)
+
+
+def tor_signal_control_port():
+    with Controller.from_port(port=config.TOR_CONTROL_PORT) as ctr:
+        try:
+            ctr.authenticate(password="")
+            print(1)
+        except Exception:
+            print("problem1")
+        try:
+            ctr.signal(stem.Signal.HUP)
+            print(2)
+        except Exception:
+            print("problem2")
+        try:
+            # gets stuck here
+            ctr.close()
+            print(3)
+        except Exception:
+            print("problem3")
+        print(4)
+        return "yes"
+
+
+controller = Controller.from_port(port=config.TOR_CONTROL_PORT)
+controller.authenticate(password="")
+controller.signal(stem.Signal.HUP)
+controller.close()
+
+tor_signal_control_port()
+
+
+os.kill(9208, signal.SIGHUP)
 
 
 
