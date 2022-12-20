@@ -12,9 +12,16 @@ import logging
 import socket
 
 
-def socket_available(host, port):
+def socket_available(host: str, port: int):
+    """
+    Check if a socket accepts connections.
+
+    :param host: Host (ip).
+    :param port: Port.
+    :return: True if connection can be established.
+    """
     socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    available = socket_connection.connect_ex((host, port)) # returns 0 if port open
+    available = socket_connection.connect_ex((host, port))                  # returns 0 if port is open
     socket_connection.close()
     return available == 0
 
@@ -22,12 +29,12 @@ def socket_available(host, port):
 def tor_control_getinfo(keyword: str = "info/names", password: str = "") -> str:
     """
     Sends a GETINFO request with input keyword to tor control port.
-    Keywords: https://gitweb.torproject.org/torspec.git/tree/control-spec.txt - section 3.9 GETINFO
-    Alternative ways to see all keywords: use "info/names" keyword
+    Keywords: https://gitweb.torproject.org/torspec.git/tree/control-spec.txt - section 3.9 GETINFO.
+    Alternative way to see all keywords: use request with "info/names" keyword.
 
-    :param keyword: tor control port GETINFO keyword
-    :param password: tor control port password
-    :return:
+    :param keyword: tor control port GETINFO keyword.
+    :param password: tor control port password.
+    :return: String with info returned by the tor control GETINFO command.
     """
     try:
         controller = Controller.from_port(port = config.TOR_CONTROL_PORT)
@@ -42,6 +49,12 @@ def tor_control_getinfo(keyword: str = "info/names", password: str = "") -> str:
 
 
 def check_tor_status():
+    """
+    Check if tor is up.
+    First if tor control port accepts connections, second if tor GETINFO reports an active status.
+
+    :return: True if tor is up, False otherwise.
+    """
     try:
         if not socket_available("127.0.0.1", config.TOR_CONTROL_PORT):
             raise ConnectionError
@@ -51,7 +64,7 @@ def check_tor_status():
         return False
 
     tor_status = tor_control_getinfo(keyword="status/circuit-established", password= "")
-    return bool(tor_status)
+    return tor_status == "1"
 
 
 check_tor_status()
