@@ -11,132 +11,24 @@ import stem
 from stem.control import Controller
 import logging
 import socket
-
-
-def socket_available(host: str, port: int) -> bool:
-    """
-    Check if a socket accepts connections.
-
-    :param host: Host (ip).
-    :param port: Port.
-    :return: True if connection can be established.
-    """
-    socket_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    available = socket_connection.connect_ex((host, port))                  # returns 0 if port is open
-    socket_connection.close()
-    return available == 0
-
-
-def tor_control_getinfo(keyword: str = "info/names", password: str = "") -> str:
-    """
-    Sends a GETINFO request with input keyword to tor control port.
-    Keywords: https://gitweb.torproject.org/torspec.git/tree/control-spec.txt - section 3.9 GETINFO.
-    Alternative way to see all keywords: use request with "info/names" keyword.
-
-    :param keyword: tor control port GETINFO keyword.
-    :param password: tor control port password.
-    :return: String with info returned by the tor control GETINFO command.
-    """
-    try:
-        with Controller.from_port(port=config.TOR_CONTROL_PORT) as controller:
-            controller.authenticate(password=password)
-            response = controller.get_info(keyword)
-            controller.close()
-            return response
-    except Exception as exception:
-        log_string = f"While trying to GETINFO from tor control port with keyword '{keyword}', " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-
-
-def check_tor_status() -> bool:
-    """
-    Check if tor is up.
-    Checks first if tor control port accepts connections,
-    second if tor GETINFO reports an active status.
-
-    :return: True if tor is up, False otherwise.
-    """
-    try:
-        if not socket_available("127.0.0.1", config.TOR_CONTROL_PORT):
-            raise ConnectionError
-    except ConnectionError as error:
-        log_string = f"While checking tor status, {type(error).__name__} occurred: Couldn't reach the tor control port!"
-        logging.error(log_string)
-        return False
-
-    tor_status = tor_control_getinfo(keyword="status/circuit-established", password= "")
-    return tor_status == "1"
-
-
-check_tor_status()
-
-
+import requests
 import os
 import signal
 import psutil
 
 
-def get_pids(process_name: str) -> list[int]:
-    pids = [process.pid for process in psutil.process_iter(attrs=["name"])
-            if process.name().lower() == process_name.lower()]
-    return pids
-
-
-def kill_tor_process() -> None:
-    for pid in get_pids(config.TOR_PROCESS_NAME):
-        os.kill(pid, signal.SIGTERM)
-    return
-
-
-def tor_signal_control_port(signal, password=""):
-    try:
-        with Controller.from_port(port=config.TOR_CONTROL_PORT) as controller:
-            controller.authenticate(password=password)
-            controller.signal(stem.Signal.HUP)
-            return
-    except Exception as exception:
-        log_string = f"While trying to send a signal to tor control port, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-
-
-def tor_signal_control_port():
-    with Controller.from_port(port=config.TOR_CONTROL_PORT) as ctr:
-        try:
-            ctr.authenticate(password="")
-            print(1)
-        except Exception:
-            print("problem1")
-        try:
-            ctr.signal(stem.Signal.HUP)
-            print(2)
-        except Exception:
-            print("problem2")
-        try:
-            # gets stuck here
-            ctr.close()
-            print(3)
-        except Exception:
-            print("problem3")
-        print(4)
-        return "yes"
-
-
-controller = Controller.from_port(port=config.TOR_CONTROL_PORT)
-controller.authenticate(password="")
-controller.signal(stem.Signal.HUP)
-controller.close()
-
-tor_signal_control_port()
-
-
-os.kill(9208, signal.SIGHUP)
 
 
 
 
-socks5_socket = f"socks5://127.0.0.1:{config.TOR_PORT}"
+
+
+
+
+
+
+
+socks5_socket = f"socks5://{config.LOCALHOST}:{config.TOR_PORT}"
 stem.Signal("HUP")
 
 options = uc.ChromeOptions()
