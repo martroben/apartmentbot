@@ -24,11 +24,6 @@ def log_exceptions(*args, **kwargs):
     return inner_function
 
 
-@log_exceptions()
-def asi():
-   return 1/0
-
-
 def get_sqlite_data_type(python_object: object) -> str:
     """
     Get sqlite data type of input object.
@@ -110,7 +105,7 @@ def insert_listing(listing: Listing, table: str, connection: sqlite3.Connection)
     try:
         sql_cursor.execute(insert_listing_command)
     except sqlite3.Error as sql_error:
-        log_string = f"In function {sql_insert_listing.__name__}, {type(sql_error).__name__} error occurred " + \
+        log_string = f"In function {insert_listing.__name__}, {type(sql_error).__name__} error occurred " + \
                      f"with listing {listing}: {sql_error}"
         logging.error(log_string)
     return
