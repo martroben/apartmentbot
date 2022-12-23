@@ -5,17 +5,28 @@ import logging
 import time
 
 
-def log_exceptions(function):
+def log_exceptions(*args, **kwargs):
     """
     Decorator function to log exceptions occurring in a function.
+    Description of attempted actions can be supplied by a 'context' variable.
     """
-    def inner_function(*args, **kwargs):
+    def inner_function(function):
+        context = kwargs.get("context")
+        if context:
+            del kwargs["context"]
         try:
             return function(*args, **kwargs)
         except Exception as exception:
-            log_string = f"In function {function.__name__}, {type(exception).__name__} exception occurred: {exception}"
+            log_string = f"In function {function.__name__}, " \
+                         f"{type(exception).__name__} exception occurred: {exception}" \
+                         f"{bool(context)*f', while {context}'}."
             logging.exception(log_string)
     return inner_function
+
+
+@log_exceptions()
+def asi():
+   return 1/0
 
 
 def get_sqlite_data_type(python_object: object) -> str:

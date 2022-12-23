@@ -2,7 +2,7 @@
 VOLUME_MOUNT_DIR: str = "/apartment_bot"
 LOG_DIR: str = "/media/mart/Data/martroben/Projects/Python/apartment_bot/apartment_bot_py/log"
 # f"{VOLUME_MOUNT_DIR}/log"
-TOR_TORRC_PATH: str = "/etc/tor/torrc"
+TORRC_PATH: str = "/etc/tor/torrc"
 TOR_PROCESS_NAME: str = "tor"
 TOR_PORT: int = 9050
 TOR_CONTROL_PORT: int = 9051
@@ -26,5 +26,6 @@ USER_AGENT_HEADER: str = "curl/7.81.0"
 
 
 # Environmental variables
-# TOR_CONTROL_PORT_PASSWORD - tor control port password
+# TOR_CONTROL_PORT_PASSWORD
 # TOR_CONTROL_PORT
+# TOR_PORT

@@ -91,6 +91,7 @@ def kill_process(process_name: str, sighup: bool = False) -> None:
     :param sighup: Send SIGHUP signal instead of SIGTERM
     :return: None
     """
+    # Dependencies: get_pids
     for pid in get_pids(process_name):
         if sighup:
             os.kill(pid, signal.SIGHUP)
@@ -146,11 +147,13 @@ def get_ip(tor: bool = False) -> str:
 def tor_reset_ip() -> bool:
     """
     Change tor ip. Tries to signal SIGHUP through tor control port first.
-    If that fails, tries to send os kill SIGHUP signal to tor process
+    If that fails, tries to send os kill SIGHUP signal to tor process.
     From terminal: os.kill(<PID>, signal.SIGHUP)
 
     :return: None
     """
+    # Dependencies: get_ip, tor_signal_control_port, kill_process
+
     old_tor_ip = get_ip(tor=True)
     try:
         tor_signal_control_port(stem.Signal.RELOAD)
@@ -172,30 +175,44 @@ def tor_reset_ip() -> bool:
     return success
 
 
-def tor_setup_control_port(torrc_path: str, socks_port: (str, int) = 9050, control_port: (str, int) = 9051,
-                           password: str = "", auto_generate_password:bool = False) -> None:
+def torrc_modify_line(pattern: re.Pattern, replace:str, torrc_contents: list[str]) -> None:
     """
-    Sets up tor control port and control port password in torrc file.
-    Saves password to environmental variables.
+    Set or replace value in a line of torrc (tor config file).
 
-    :param torrc_path: torrc file path.
-    :param port: Port number that is to be configured as the control port.
-    :param password: What should be the control port password.
-    :param auto_generate_password: Auto-generate password
-    Uncomments the control port line in torrc file.
-    Uncomments and sets a password hash for control port.
-
+    :param pattern: Regex pattern object that matches torrc line to be replaced.
+    :param replace: Replacement string.
+    :param torrc_contents: List of torrc lines.
     :return: None
     """
-    logging.info("Starting tor control port setup!")
-    torrc_port_comment_pattern = re.compile(r"^#\s*ControlPort\s*9051")
-    torrc_port_pattern = re.compile(r"^ControlPort.*$")
-    torrc_password_comment_pattern = re.compile(r"^#\s*HashedControlPassword")
-    torrc_password_pattern = re.compile(r"^HashedControlPassword.*$")
 
-    # Auto-generate control port password
-    if auto_generate_password:
-        password = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    n_matches = 0
+    modified_torrc = list()
+    for line in torrc_contents:
+        line = pattern.sub(replace, line)
+        modified_torrc += [line]
+        n_matches += bool(pattern.search(line))
+
+    if n_matches == 0:
+        modified_torrc += [replace]
+        log_string = f"No matches found in torrc file when setting '{replace}'! " \
+                     f"Added line '{replace}' to torrc."
+        logging.warning(log_string)
+    if n_matches > 1:
+        log_string = f"{n_matches} matching lines found in torrc file when setting '{replace}'! " \
+                     f"(Expected to get a single match.) " \
+                     f"Modified all of the matching lines."
+        logging.warning(log_string)
+
+    return
+
+
+def tor_get_password_hash(password: str) -> str:
+    """
+    Request password hash from tor process.
+
+    :param password: Password that is to be hashed.
+    :return: tor-specific hash string of the input password.
+    """
     logging.info("Requesting tor to generate control port password hash...")
     password_hash = str()
     try:
@@ -209,61 +226,89 @@ def tor_setup_control_port(torrc_path: str, socks_port: (str, int) = 9050, contr
     if password_hash == "":
         logging.error("Failed to generate control port password hash!")
 
-    logging.info("Reading the current torrc file...")
-    with open(torrc_path, "r", encoding="utf-8") as torrc:
-        original_torrc = torrc.readlines()
+    return password_hash
 
-    # Rewrite torrc file to enable control port
-    logging.info("Modifying torrc contents...")
-    modified_torrc = list()
-    try:
-        for line in original_torrc:
-            if str(port) != 9051:
-                line = torrc_port_comment_pattern.sub("ControlPort 9051", line)
-                line = torrc_port_pattern.sub(f"ControlPort {port}", line)
-            if auto_generate_password or password != "":
-                line = torrc_password_comment_pattern.sub(f"HashedControlPassword", line)
-                line = torrc_password_pattern.sub(f"HashedControlPassword {password_hash}", line)
-            modified_torrc += [line]
-    except Exception as exception:
-        log_string = f"While trying to read existing torrc file, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
 
-    logging.info("Writing the modified torrc file...")
-    try:
-        with open(torrc_path, "w", encoding="utf-8") as torrc:
-            torrc.writelines(modified_torrc)
-    except Exception as exception:
-        log_string = f"While trying to write the modified torrc file, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
+def torrc_set_values(torrc_lines: list[str], socks_port: (int, str) = "", control_port: (int, str) = "",
+                control_port_password: str = "", auto_generate_password: bool = False) -> None:
+    """
+    Set values of input parameters in torrc (tor config) file.
+    Default values don't modify the torrc file.
+    Saves control port password to environmental variables, if password is to be set.
 
-    # Save control port password to environmental variables
-    logging.info("Writing control port password to environmental variables...")
-    try:
-        os.environ["TOR_CONTROL_PORT_PASSWORD"]
-    except Exception as exception:
-        log_string = f"While trying to save tor control port password to environmental variables, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
+    :param torrc_lines: List of torrc lines.
+    :param socks_port: Socks5 port on localhost.
+    :param control_port: Tor control port.
+    :param control_port_password: Control port password.
+    :param auto_generate_password: Auto generate control port password.
+    :return: None
+    """
+    if socks_port:
+        socks_port_parameter = "SocksPort"
+        logging.info(f"Setting torrc {socks_port_parameter} value to {socks_port}")
+        # Match "# SocksPort 9050" and "SocksPort 10", but not "# SocksPort 192.168.0.1"
+        socks_port_pattern = re.compile(rf"^#*\s*{socks_port_parameter}(?!\s*\d{{1,3}}\.\d{{1,3}}).*$")
+        socks_port_replacement = f"{socks_port_parameter} {socks_port}"
+        torrc_modify_line(socks_port_pattern, socks_port_replacement, torrc_lines)
 
-    logging.info("tor control port setup complete!")
+    if control_port:
+        control_port_parameter = "ControlPort"
+        logging.info(f"Setting torrc {control_port_parameter} value to {control_port}")
+        control_port_pattern = re.compile(rf"^#*\s*{control_port_parameter}.*$")
+        control_port_replacement = f"{control_port_parameter} {control_port}"
+        torrc_modify_line(control_port_pattern, control_port_replacement, torrc_lines)
+
+    if control_port_password or auto_generate_password:
+        control_port_password_parameter = "HashedControlPassword"
+        logging.info(f"Setting torrc {control_port_password_parameter} value{auto_generate_password*' automatically'}.")
+        # Auto-generate random password and save it as environmental variable
+        if auto_generate_password:
+            os.environ["TOR_CONTROL_PORT_PASSWORD"] = "".join(random.choices(
+                population=string.ascii_uppercase + string.digits,
+                k=8))
+        else:
+            os.environ["TOR_CONTROL_PORT_PASSWORD"] = control_port_password
+        control_port_password_value = tor_get_password_hash(os.environ.get("TOR_CONTROL_PORT_PASSWORD"))
+        control_port_password_pattern = re.compile(rf"^#*\s*{control_port_password_parameter}.*$")
+        control_port_password_replacement = f"{control_port_password_parameter} {control_port_password_value}"
+        torrc_modify_line(control_port_password_pattern, control_port_password_replacement, torrc_lines)
+
     return
 
 
-tor_setup_control_port(config.TOR_TORRC_PATH)
+try:
+    with open(config.TORRC_PATH, "r", encoding="utf-8") as torrc:
+        torrc_lines = torrc.readlines()
+except Exception as exception:
+    log_string = f"While trying to open torrc file, " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
 
+try:
+    torrc_set_values(torrc_lines)
+except Exception as exception:
+    log_string = f"While trying to modify torrc lines, " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
 
+try:
+    with open(config.TORRC_PATH, "w", encoding="utf-8") as torrc:
+        torrc.writelines(config.TORRC_PATH)
+except Exception as exception:
+    log_string = f"While trying to write the modified torrc file, " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
 
-    # Enforce new settings
-    logging.info("Checking if tor service is running...")
+try:
     tor_processes = [process for process in psutil.process_iter() if process.name() == config.TOR_PROCESS_NAME]
     if tor_processes:
-        logging.info("tor service is already running. Resetting...")
+        logging.info("tor services already running. Resetting...")
+        for process in tor_processes:
+            kill_process(process.name())
 
-    else:
-        logging.info("tor service was not running! Starting tor service.")
-        subprocess.run(["service",  config.TOR_PROCESS_NAME, "start"])
-
-
+    logging.info("Starting new tor service")
+    subprocess.run(["service",  config.TOR_PROCESS_NAME, "start"])
+except Exception as exception:
+    log_string = f"While trying to start tor service with new configuration, " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
