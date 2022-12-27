@@ -2,7 +2,7 @@ import config
 import portal_requests
 import data_processing
 import file_mgmt
-import tor_operations
+import tor_operations_legacy
 import sqlite_operations
 
 from datetime import date
