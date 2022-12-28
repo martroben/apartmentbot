@@ -2,7 +2,6 @@ import socket
 import logging
 import requests
 import re
-from time import sleep
 
 
 def get_ip(ip_api_url: str, tor_host: str = "127.0.0.1", socks_port: (int, str) = 9050, tor: bool = False) -> str:
@@ -34,7 +33,7 @@ def get_ip(ip_api_url: str, tor_host: str = "127.0.0.1", socks_port: (int, str) 
         logging.exception(log_string)
 
 
-def check_tor_ip(tor_host: str, socks_port: (int, str), ip_api_url: str) -> bool:
+def check_tor_ip_up(tor_host: str, socks_port: (int, str), ip_api_url: str) -> bool:
     """
     Check if IP via tor proxy is different from regular IP.
 
@@ -120,7 +119,7 @@ def tor_control_port_command(command: str, tor_host: str, tor_control_port: (int
     Send a command to tor control port.
     Additional info: https://gitweb.torproject.org/torspec.git/tree/control-spec.txt
 
-    :param command: Command to send (e.g. SIGNAL TERM, NEWNYM etc.)
+    :param command: Command to send (e.g. SIGNAL TERM, SIGNAL NEWNYM etc.)
     :param tor_host: IP of tor service.
     :param tor_control_port: Port number of tor control port.
     :param tor_control_port_password: Password set to tor control port.
@@ -160,11 +159,12 @@ def tor_control_port_command(command: str, tor_host: str, tor_control_port: (int
     return command_response
 
 
-is_tor_ip_different = check_tor_ip("172.28.5.2", 9050, "http://api.ipify.org")
-is_control_port_up = check_tor_control_port("172.28.5.2", 9051)
+is_tor_ip_different = check_tor_ip_up("172.28.5.2", 9050, "http://api.ipify.org")
+is_tor_control_port_up = check_tor_control_port("172.28.5.2", 9051)
 logging.info(f"Tor IP different: {is_tor_ip_different}")
-logging.info(f"Tor control port accessible: {is_control_port_up}")
+logging.info(f"Tor control port accessible: {is_tor_control_port_up}")
 
 logging.info(f"Original tor IP: {get_ip('http://api.ipify.org', '172.28.5.2', tor=True)}")
+# Change tor IP. Alternatively, SIGNAL SIGHUP could be used.
 print(tor_control_port_command('SIGNAL NEWNYM', '172.28.5.2', 9051, 'tere'))
 logging.info(f"Changed tor IP: {get_ip('http://api.ipify.org', '172.28.5.2', tor=True)}")
