@@ -29,3 +29,7 @@ USER_AGENT_HEADER: str = "curl/7.81.0"
 # TOR_CONTROL_PORT_PASSWORD
 # TOR_CONTROL_PORT
 # TOR_PORT
+# CHROME_VERSION export CHROME_VERSION=$(google-chrome --version | sed 's/Google Chrome \([0-9]*\).*/\1/g')
+# - could be problematic, because Chrome will not run as root without --no-sandbox and crashes when it's added.
+# - works fine when run in entrypoint_sample.sh
+# DISPLAY :1 (has to be set in entrypoint_sample.sh before running py script)

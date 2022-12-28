@@ -8,7 +8,7 @@ import logging
 # Global
 tor_host = "172.28.5.2"
 socks_port = 9050
-# chrome_version = "108"
+chrome_version = "108"
 log_path = "/log/chromedriver.log"
 
 url = "https://check.torproject.org/"

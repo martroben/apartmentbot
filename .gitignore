@@ -4,9 +4,10 @@ log/
 _TODO
 cf_requests.py
 control_port_password
-Dockerfile
 sample_response.txt
 selenium_request.py
+succ
+entrypoint_sample.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
