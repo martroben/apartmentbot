@@ -8,6 +8,18 @@ import random
 import os
 
 
+def get_wait_time():
+    """
+    Get a "human-like" wait time (for navigating to new page etc.)
+    :return: Values between 5 and 20.
+    """
+    wait_time = random.expovariate(lambd=0.15)
+    if wait_time < 5 or wait_time > 20:
+        wait_time = get_wait_time()
+    logging.info(f"Wait time: {round(wait_time,2)} seconds.")
+    return wait_time
+
+
 def retry_function(times: int = 3, exceptions=Exception, retry_interval_sec: int = random.randint(3, 10)):
     """
     Retries the wrapped function. Meant to be used as a decorator.
@@ -35,7 +47,7 @@ def retry_function(times: int = 3, exceptions=Exception, retry_interval_sec: int
     return decorator
 
 
-@retry_function()
+@retry_function(retry_interval_sec=get_wait_time())
 def uc_scrape_page(url: str, driver: undetected_chromedriver.Chrome):
     driver.get(url)
     sleep(5)
@@ -91,10 +103,17 @@ for url in scrape_urls:
                      f"{type(exception).__name__} occurred: {exception}"
         logging.exception(log_string)
         scraped_pages += [f"{url}: NOTHING SCRAPED"]
+    sleep(get_wait_time())
+
 
 chrome_driver.quit()
+
 for page in scraped_pages:
     if len(page) < 300:
         print(page)
     else:
         print(len(page))
+
+# TO DO:
+# Create wrapper function for everything.
+#
