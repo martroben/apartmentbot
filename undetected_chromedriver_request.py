@@ -1,20 +1,27 @@
 from urllib.error import ContentTooShortError
 
-import undetected_chromedriver
 import undetected_chromedriver as uc
 from time import sleep
 import logging
 import random
 import os
 
+from selenium.common import TimeoutException
+from selenium.webdriver.support.select import Select
+from selenium.webdriver.remote.webdriver import By
+import selenium.webdriver.support.expected_conditions as EC  # noqa
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.remote.webelement import WebElement
+from undetected_chromedriver.webelement import UCWebElement
 
 def get_wait_time():
     """
     Get a "human-like" wait time (for navigating to new page etc.)
     :return: Values between 5 and 20.
     """
-    wait_time = random.expovariate(lambd=0.15)
-    if wait_time < 5 or wait_time > 20:
+    average_wait_time_sec = 3
+    wait_time = random.expovariate(lambd=1/average_wait_time_sec)
+    if wait_time < 3 or wait_time > 15:
         wait_time = get_wait_time()
     logging.info(f"Wait time: {round(wait_time,2)} seconds.")
     return wait_time
@@ -48,7 +55,7 @@ def retry_function(times: int = 3, exceptions=Exception, retry_interval_sec: int
 
 
 @retry_function(retry_interval_sec=get_wait_time())
-def uc_scrape_page(url: str, driver: undetected_chromedriver.Chrome):
+def uc_scrape_page(url: str, driver: uc.Chrome):
     driver.get(url)
     sleep(5)
     scraped_data = driver.page_source
@@ -56,7 +63,7 @@ def uc_scrape_page(url: str, driver: undetected_chromedriver.Chrome):
 
 
 @retry_function(exceptions=ContentTooShortError)
-def get_chrome_driver(options: undetected_chromedriver.ChromeOptions = uc.ChromeOptions(),
+def get_chrome_driver(options: uc.ChromeOptions = uc.ChromeOptions(),
                       log_path: str = "/log/chromedriver.log"):
 
     if not os.path.isdir(os.path.dirname(log_path)):
@@ -75,8 +82,11 @@ chrome_version = "108"
 chromedriver_log_path = "/home/mart/apartment_bot/log/chromedriver.log"
 
 # Input
-scrape_urls = ["https://gitweb.torproject.org/torspec.git/tree/control-spec.txt",
-               "https://www.reddit.com/search/?q=r%2FCOVID19"]
+navigate_url = "https://www.kv.ee/"
+scrape_urls = ["https://www.kv.ee/",
+               # "https://gitweb.torproject.org/torspec.git/tree/control-spec.txt",
+               # "https://www.reddit.com/search/?q=r%2FCOVID19"
+               ]
 
 # Specify tor connection
 # Socket format: https://devpress.csdn.net/python/62fe30f8c6770329308047f0.html
@@ -86,6 +96,7 @@ chrome_options = uc.ChromeOptions()
 chrome_options.add_argument(f"--proxy-server={socks_socket}")
 # uc_options.add_argument("--headless")
 
+
 try:
     chrome_driver = get_chrome_driver(chrome_options, chromedriver_log_path)
 except Exception as exception:
@@ -94,25 +105,79 @@ except Exception as exception:
     logging.exception(log_string)
     exit(1)
 
-scraped_pages = list()
-for url in scrape_urls:
-    try:
-        scraped_pages += [uc_scrape_page(url=url, driver=chrome_driver)]
-    except Exception as exception:
-        log_string = f"While trying to load {url} in Chrome " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-        scraped_pages += [f"{url}: NOTHING SCRAPED"]
-    sleep(get_wait_time())
+chrome_driver.get(navigate_url)
+try:
+    privacy_screen = WebDriverWait(chrome_driver, timeout=15).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="onetrust-pc-btn-handler"]')))
+    privacy_screen.find_element(By.XPATH, '//*[@id="onetrust-pc-btn-handler"]').click()
+    privacy_screen_extended = WebDriverWait(chrome_driver, timeout=15).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@class="save-preference-btn-handler onetrust-close-btn-handler"]')))
+    privacy_screen_extended.find_element(
+        By.XPATH, '//*[@class="save-preference-btn-handler onetrust-close-btn-handler"]').click()
+except TimeoutException:
+    log_string = f"Seems that no privacy screen was raised when loading {navigate_url}."
+    logging.info(log_string)
+sleep(get_wait_time())
+
+county_dropdown = chrome_driver.find_element(By.XPATH, '//*[@id="county"]')
+Select(county_dropdown).select_by_visible_text("Tallinn")
+sleep(get_wait_time())
+
+area_checkbox = chrome_driver.find_element(By.XPATH, '//*[@for="city_1011"]')
+chrome_driver.execute_script("arguments[0].scrollIntoView();", area_checkbox)
+area_checkbox.click()
+sleep(get_wait_time())
+
+rooms_min = chrome_driver.find_element(By.XPATH, '//*[@id="rooms_min"]')
+rooms_min.send_keys("3")
+sleep(get_wait_time())
+
+rooms_max = chrome_driver.find_element(By.XPATH, '//*[@id="rooms_max"]')
+rooms_max.send_keys("3")
+sleep(get_wait_time())
+
+search_button = chrome_driver.find_element(By.XPATH, '//*[@class="btn btn-search hide-on-mobile"]')
+search_button.click()
+sleep(20)
+
+# xpath cleanup
 
 
-chrome_driver.quit()
+# chrome.execute_script("arguments[0].click();", check_conditions)
 
-for page in scraped_pages:
-    if len(page) < 300:
-        print(page)
-    else:
-        print(len(page))
+# for item in county_dropdown.find_elements(By.XPATH, ".//*"):
+#     print(item.text)
+
+
+
+### FRAMES??
+
+# county_dropdown._web_element_cls = uc.UCWebElement
+# for item in county_dropdown.children():
+#     print(item.text)
+
+# Select(county_dropdown).select_by_value("1061")
+
+
+# scraped_pages = list()
+# for url in scrape_urls:
+#     try:
+#         scraped_pages += [uc_scrape_page(url=url, driver=chrome_driver)]
+#     except Exception as exception:
+#         log_string = f"While trying to load {url} in Chrome " \
+#                      f"{type(exception).__name__} occurred: {exception}"
+#         logging.exception(log_string)
+#         scraped_pages += [f"{url}: NOTHING SCRAPED"]
+#     sleep(get_wait_time())
+#
+#
+# chrome_driver.quit()
+#
+# for page in scraped_pages:
+#     if len(page) < 300:
+#         print(page)
+#     else:
+#         print(len(page))
 
 # TO DO:
 # Create wrapper function for everything.
