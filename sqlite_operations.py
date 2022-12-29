@@ -5,23 +5,22 @@ import logging
 import time
 
 
-def log_exceptions(*args, **kwargs):
+def log_exceptions(context = ""):
     """
     Decorator function to log exceptions occurring in a function.
     Description of attempted actions can be supplied by a 'context' variable.
     """
-    def inner_function(function):
-        context = kwargs.get("context")
-        if context:
-            del kwargs["context"]
-        try:
-            return function(*args, **kwargs)
-        except Exception as exception:
-            log_string = f"In function {function.__name__}, " \
-                         f"{type(exception).__name__} exception occurred: {exception}" \
-                         f"{bool(context)*f', while {context}'}."
-            logging.exception(log_string)
-    return inner_function
+    def decorator(function):
+        def inner_function(*args, **kwargs):
+            try:
+                return function(*args, **kwargs)
+            except Exception as exception:
+                log_string = f"In function {function.__name__}, " \
+                             f"{type(exception).__name__} exception occurred: {exception}" \
+                             f"{bool(context)*f', while {context}'}."
+                logging.exception(log_string)
+        return inner_function
+    return decorator
 
 
 def get_sqlite_data_type(python_object: object) -> str:
@@ -44,7 +43,7 @@ def get_sqlite_data_type(python_object: object) -> str:
         return "BLOB"
 
 
-@log_exceptions
+@log_exceptions()
 def table_exists(name: str, connection: sqlite3.Connection) -> bool:
     """
     Check if table exists in SQLite.
@@ -61,7 +60,7 @@ def table_exists(name: str, connection: sqlite3.Connection) -> bool:
     return table_exists
 
 
-@log_exceptions
+@log_exceptions()
 def create_listing_table(table: str, connection: sqlite3.Connection) -> None:
     """
     Creates table for listings to SQLite, using config.SQL_LISTING_TABLE_NAME as table name
@@ -111,7 +110,7 @@ def insert_listing(listing: Listing, table: str, connection: sqlite3.Connection)
     return
 
 
-@log_exceptions
+@log_exceptions()
 def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = None) -> list[dict]:
     """
     Get data from a SQL table.
@@ -137,7 +136,7 @@ def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = N
     return data_rows
 
 
-@log_exceptions
+@log_exceptions()
 def deactivate_id(listing_id: str, table: str, connection: sqlite3.Connection, activate: bool = False) -> None:
     """
     Sets the 'active' column value for a row in SQL table by listing id.
