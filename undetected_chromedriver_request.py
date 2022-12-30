@@ -119,23 +119,28 @@ except TimeoutException:
     logging.info(log_string)
 sleep(get_wait_time())
 
+# alternative: //div[contains(@class, "short-search-county-parish")]//select[@id="county"]
 county_dropdown = chrome_driver.find_element(By.XPATH, '//*[@id="county"]')
 Select(county_dropdown).select_by_visible_text("Tallinn")
 sleep(get_wait_time())
 
+# alternative: //div[contains(@class, short-search-city)]/*[@class="check-list"] (dynamic - appears after selection)
 area_checkbox = chrome_driver.find_element(By.XPATH, '//*[@for="city_1011"]')
 chrome_driver.execute_script("arguments[0].scrollIntoView();", area_checkbox)
 area_checkbox.click()
 sleep(get_wait_time())
 
+# alternative //input[@id="rooms_min"]
 rooms_min = chrome_driver.find_element(By.XPATH, '//*[@id="rooms_min"]')
 rooms_min.send_keys("3")
 sleep(get_wait_time())
 
+# alternative //input[@id="rooms_max"]
 rooms_max = chrome_driver.find_element(By.XPATH, '//*[@id="rooms_max"]')
 rooms_max.send_keys("3")
 sleep(get_wait_time())
 
+# alternative //button[contains(@class, "btn-search")] (several matches - choose first?)
 search_button = chrome_driver.find_element(By.XPATH, '//*[@class="btn btn-search hide-on-mobile"]')
 search_button.click()
 sleep(20)
