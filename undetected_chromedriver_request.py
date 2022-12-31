@@ -82,7 +82,7 @@ chrome_version = "108"
 chromedriver_log_path = "/home/mart/apartment_bot/log/chromedriver.log"
 
 # Input
-navigate_url = "https://www.kv.ee/"
+navigate_url = "https://amiunique.org/fp"
 scrape_urls = ["https://www.kv.ee/",
                # "https://gitweb.torproject.org/torspec.git/tree/control-spec.txt",
                # "https://www.reddit.com/search/?q=r%2FCOVID19"
@@ -106,44 +106,54 @@ except Exception as exception:
     exit(1)
 
 chrome_driver.get(navigate_url)
+type(chrome_driver.page_source)
+sleep(30)
+
+show_privacy_options_xpath = '//button[@id="onetrust-pc-btn-handler"]'
+save_privacy_options_xpath = '//button[contains(@class, "save-preference-btn-handler")'
 try:
     privacy_screen = WebDriverWait(chrome_driver, timeout=15).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="onetrust-pc-btn-handler"]')))
-    privacy_screen.find_element(By.XPATH, '//*[@id="onetrust-pc-btn-handler"]').click()
+        EC.presence_of_element_located((By.XPATH, show_privacy_options_xpath)))
+    privacy_screen.find_element(By.XPATH, show_privacy_options_xpath).click()
     privacy_screen_extended = WebDriverWait(chrome_driver, timeout=15).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@class="save-preference-btn-handler onetrust-close-btn-handler"]')))
-    privacy_screen_extended.find_element(
-        By.XPATH, '//*[@class="save-preference-btn-handler onetrust-close-btn-handler"]').click()
+        EC.presence_of_element_located((By.XPATH, save_privacy_options_xpath)))
+    privacy_screen_extended.find_element(By.XPATH, save_privacy_options_xpath).click()
 except TimeoutException:
     log_string = f"Seems that no privacy screen was raised when loading {navigate_url}."
     logging.info(log_string)
 sleep(get_wait_time())
 
-# alternative: //div[contains(@class, "short-search-county-parish")]//select[@id="county"]
-county_dropdown = chrome_driver.find_element(By.XPATH, '//*[@id="county"]')
+county_dropdown_xpath = '//div[contains(@class, "short-search-county-parish")]//select[@id="county"]'
+county_dropdown = chrome_driver.find_element(By.XPATH, county_dropdown_xpath)
 Select(county_dropdown).select_by_visible_text("Tallinn")
 sleep(get_wait_time())
 
-# alternative: //div[contains(@class, short-search-city)]/*[@class="check-list"] (dynamic - appears after selection)
+area_name = "Põhja-Tallinn"
+area_id_xpath = f'//label[text()[contains(., "{area_name}")]]'
+area_id = chrome_driver.find_element(By.XPATH, area_id_xpath).get_attribute("for")
+
+area_checkbox_xpath = f'//input[@type="checkbox"and @id="{area_id}"]'
 area_checkbox = chrome_driver.find_element(By.XPATH, '//*[@for="city_1011"]')
-chrome_driver.execute_script("arguments[0].scrollIntoView();", area_checkbox)
 area_checkbox.click()
 sleep(get_wait_time())
 
-# alternative //input[@id="rooms_min"]
-rooms_min = chrome_driver.find_element(By.XPATH, '//*[@id="rooms_min"]')
-rooms_min.send_keys("3")
+rooms_min = 3
+rooms_min_xpath = '//input[@id="rooms_min"]'
+rooms_min_field = chrome_driver.find_element(By.XPATH, rooms_min_xpath)
+rooms_min_field.send_keys(rooms_min)
 sleep(get_wait_time())
 
-# alternative //input[@id="rooms_max"]
-rooms_max = chrome_driver.find_element(By.XPATH, '//*[@id="rooms_max"]')
-rooms_max.send_keys("3")
+rooms_max = 3
+rooms_max_xpath = '//input[@id="rooms_max"]'
+rooms_max_field = chrome_driver.find_element(By.XPATH, rooms_max_xpath)
+rooms_max_field.send_keys(rooms_max)
 sleep(get_wait_time())
 
-# alternative //button[contains(@class, "btn-search")] (several matches - choose first?)
-search_button = chrome_driver.find_element(By.XPATH, '//*[@class="btn btn-search hide-on-mobile"]')
-search_button.click()
+search_buttons_xpath = '//button[contains(@class, "btn-search")]'
+search_buttons = chrome_driver.find_elements(By.XPATH, search_buttons_xpath)
+search_buttons[0].click()
 sleep(20)
+
 
 # xpath cleanup
 

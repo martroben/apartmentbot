@@ -8,7 +8,7 @@ from time import time, sleep
 # Functions
 def c24_request(n_rooms: int) -> requests.models.Response:
     """
-    Query city24 for apartments.
+    Query c24 for apartments.
 
     Example get request from inspection:
     https://m-api.city24.ee/et_EE/search/realties?address[cc]=1&address[city][]=3166&address[city][]=1535&tsType=sale&unitType=Apartment&roomCount=3&itemsPerPage=500&page=1
@@ -20,7 +20,7 @@ def c24_request(n_rooms: int) -> requests.models.Response:
     To query several room counts, use roomCount=3,4,5+
 
     :param n_rooms: Number of rooms to query for. Either int or list of ints.
-    :return: requests.models.Response object from city24 request
+    :return: requests.models.Response object.
     """
 
     # Areas:
