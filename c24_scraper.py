@@ -1,3 +1,4 @@
+import re
 from requests import Request
 import random
 import os
@@ -75,7 +76,7 @@ def get_chrome_driver(options: uc.ChromeOptions = uc.ChromeOptions(),
         warning_string = f"Directory for logfile {chrome_driver_log_path} doesn't exist. " \
                          f"This may cause Chrome driver to quit unexpectedly."
         raise UserWarning(warning_string)
-    driver = uc.Chrome(options=options, service_log_path=chrome_driver_log_path)
+    driver = uc.Chrome(options=options, version_main=CHROME_VERSION, service_log_path=chrome_driver_log_path)
     driver.set_page_load_timeout(120)
     return driver
 
@@ -150,6 +151,15 @@ if __name__ == "__main__":
 
     logging.info("c24 scraper started")
 
+    # Check and set Chrome version environmental variable
+    if not os.environ.get("CHROME_VERSION"):
+        chrome_version_file_path = os.path.join(os.path.expanduser("~"), ".config/google-chrome/Last Version")
+        with open(chrome_version_file_path, "r") as chrome_version_file:
+            chrome_version = chrome_version_file.readline()
+            chrome_version_main_pattern = re.compile(r"^\d+")
+            chrome_version_main = chrome_version_main_pattern.search(chrome_version)[0]
+        os.environ["CHROME_VERSION"] = chrome_version_main
+
     # Randomize scrape times
     # if random.choice(list(range(3))) == 1:
     #     logging.info("c24 scraper exited with no action (randomization)")
@@ -160,12 +170,13 @@ if __name__ == "__main__":
 
     # Load environmental variables
     try:
-        C24_BASE_URL = os.environ["24_BASE_URL"]
         CONFIG_DIR_PATH = os.environ["CONFIG_DIR_PATH"]
         SCRAPED_PAGES_NEW_PATH = os.environ["SCRAPED_PAGES_NEW_PATH"]
         USER_AGENTS_FILE = os.environ["USER_AGENTS_FILE"]
         TOR_HOST = os.environ["TOR_HOST"]
         SOCKS_PORT = os.environ["SOCKS_PORT"]
+        CHROME_VERSION = os.environ["CHROME_VERSION"]
+        C24_BASE_URL = os.environ["24_BASE_URL"]
         C24_AREAS = os.environ["C24_AREAS"]
         C24_N_ROOMS = os.environ["C24_N_ROOMS"]
         C24_INDICATOR = os.environ["C24_INDICATOR"]

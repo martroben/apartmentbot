@@ -1,14 +1,18 @@
 #!/bin/bash
-# Entrypoint script of the Python/Chrome docker container.
 
-# Get chrome version and assign it as an environmental variable
-# (Can be used to download the correct chromedriver version.)
-chrome_version=$(google-chrome --version | sed 's/Google Chrome \([0-9]*\).*/\1/g')
+# Entrypoint script for Python+Chrome container.
+# Sets CHROME_VERSION environmental variable.
+# Starts Xvfb screen and runs a background loop that keeps it running.
+# Executes input argument command.
+
+
+# Set CHROME_VERSION environmental variable
+chrome_version=$(google-chrome --version | grep -Po "\\d+" | head -1)
 export CHROME_VERSION=$chrome_version
+# Alternative: chrome_version=$(google-chrome --version | sed 's/Google Chrome \([0-9]*\).*/\1/g')
 
-
+# Start Xvfb and keep it running
 function keep_up_screen()
-# Checks if Xvfb is up every 1 seconds and starts it if not
 {
     while true; do
         sleep 1
@@ -18,9 +22,7 @@ function keep_up_screen()
     done
 }
 
-# Run in background
 keep_up_screen &
 
-# Run argument as the main command in the container
-# sudo docker run --rm container --this part--> python3 file.py
+# Execute input argument as command
 exec "$@"
