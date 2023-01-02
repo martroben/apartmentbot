@@ -8,6 +8,11 @@ sample_response.txt
 selenium_request.py
 succ
 entrypoint_sample.sh
+c24_sample.txt
+kv_sample1.txt
+kv_sample2.txt
+kv_sample3.txt
+kv_sample_front.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

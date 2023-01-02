@@ -5,7 +5,7 @@ import logging
 import time
 
 
-def log_exceptions(context = ""):
+def log_exceptions(context: str = ""):
     """
     Decorator function to log exceptions occurring in a function.
     Description of attempted actions can be supplied by a 'context' variable.
