@@ -51,7 +51,6 @@ def get_human_wait_time():
     wait_time = random.expovariate(lambd=1/average_wait_time_sec)
     if wait_time < 3 or wait_time > 15:
         wait_time = get_human_wait_time()
-    logging.info(f"Inserting wait time: {round(wait_time,2)} seconds.")
     return wait_time
 
 
@@ -76,7 +75,7 @@ def retry_function(function=None, *,
         attempt = 1
         while attempt <= times:
             try:
-                return function(*args, **kwargs)
+                successful_result = function(*args, **kwargs)
             except exceptions as exception:
                 log_string = f"Retrying function {function.__name__} in {round(interval, 2)} seconds, " \
                              f"because {type(exception).__name__} exception occurred: {exception}\n" \
@@ -85,6 +84,10 @@ def retry_function(function=None, *,
                 attempt += 1
                 if attempt <= times:
                     sleep(interval)
+            else:
+                if attempt > 1:
+                    logging.info("Retry successful!")
+                return successful_result
     return retry
 
 
@@ -118,7 +121,9 @@ def uc_scrape_page(url: str, driver: uc.Chrome) -> str:
     :return: Page source string.
     """
     driver.get(url)
-    sleep(get_human_wait_time())
+    delay_sec = get_human_wait_time()
+    logging.info(f"Inserting wait time: {round(delay_sec, 2)} seconds.")
+    sleep(delay_sec)
     scraped_data = driver.page_source
     driver.close()
     return scraped_data
@@ -190,15 +195,7 @@ if __name__ == "__main__":
         style="{",
         level=logging.INFO)
 
-    logging.info("c24 scraper started")
-
-    # Randomize scrape times
-    # if random.uniform(0,1) < 0.7:
-    #     logging.info("c24 scraper exited with no action (randomization)")
-    #     exit()
-    # random_sleep_time = random.uniform(0, 3500)
-    # logging.info(f"c24 scraper sleeping for {round(random_sleep_time/60, 2)} minutes before action (randomization)")
-    # sleep(random_sleep_time)
+    logging.info(f"\n\n\n{'-*-'*10} c24 scraper started {'-*-'*10}\n")
 
     # Load environmental variables
     try:
@@ -216,32 +213,43 @@ if __name__ == "__main__":
         TOR_CONTROL_PORT_PASSWORD = os.environ.get("TOR_CONTROL_PORT_PASSWORD")
     except KeyError as error:
         log_string = f"While load environmental variables " \
-                     f"{type(error).__name__} occurred: {error}"
+                     f"{type(error).__name__} occurred: {error}. Exiting!"
         logging.exception(log_string)
         exit(1)
+
+    # Randomize scrape times
+    run_probability = 0.3
+    max_delay_time_hours = 4
+    if random.uniform(0,1) > run_probability:
+        tor_close_response = tor_operations.control_port_command(
+            command="SIGNAL TERM",
+            tor_host=TOR_HOST,
+            tor_control_port=TOR_CONTROL_PORT,
+            tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
+        logging.info(f"Tor service shut down with response {tor_close_response}.")
+        logging.info("c24 scraper exited with no action (randomization)")
+        exit()
+    delay_time = random.uniform(0, max_delay_time_hours*3600)
+    logging.info(f"c24 scraper sleeping for {round(delay_time/60, 2)} minutes before action (randomization)")
+    for i in range(5):
+        if i > 0:
+            logging.info(f"{20*i}% of delay time completed.")
+        sleep(delay_time/5)
 
     # Specify tor connection
     # Socket format: https://devpress.csdn.net/python/62fe30f8c6770329308047f0.html
     socks_socket = f"socks5://{TOR_HOST}:{SOCKS_PORT}"
 
     # Check if tor is up
+    tor_operations.is_up = retry_function(tor_operations.is_up, interval_sec=8)
     logging.info("Checking if tor service is up.")
-    try:
-        n_retries = 3
-        for attempt in range(n_retries):
-            if not tor_operations.is_up(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL):
-                if attempt < 2:
-                    logging.info(f"Tor service is not up. Retry attempt {attempt + 1} of {n_retries + 1}.")
-                    continue
-                raise UserWarning(f"Tor service is not up at {TOR_HOST}:{SOCKS_PORT}.")
-            else:
-                logging.info("Tor service is up.")
-                break
-    except Exception as exception:
-        log_string = f"While loading Chrome driver " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-        del log_string
+    tor_service_status = tor_operations.is_up(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
+
+    if tor_service_status:
+        logging.info("Tor service is up.")
+    else:
+        logging.error(f"Tor service is not up at {TOR_HOST}:{SOCKS_PORT}. Exiting!")
+        exit(1)
 
     # Check and set Chrome version environmental variable if missing
     if not os.environ.get("CHROME_VERSION"):
@@ -267,29 +275,32 @@ if __name__ == "__main__":
     c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS)
     c24_request_url = c24_request.prepare().url
 
-    # # Do the scraping
-    # logging.info(f"Executing c24 scraping with url {c24_request_url}")
-    # try:
-    #     c24_page = uc_scrape_page(c24_request_url, chrome_driver)
-    # except Exception as exception:
-    #     log_string = f"While trying to scrape c24, " \
-    #                  f"{type(exception).__name__} occurred: {exception}"
-    #     logging.exception(log_string)
-    #     del log_string
-    #     c24_page = ""
-    #
-    # # Export results
-    # if c24_page:
-    #     if not os.path.exists(SCRAPED_PAGES_NEW_PATH):
-    #         os.makedirs(SCRAPED_PAGES_NEW_PATH)
-    #
-    #     c24_export_file_name = f"{datetime.today().strftime('%Y_%m_%d_%H%M')}_{C24_INDICATOR}"
-    #     with open(os.path.join(SCRAPED_PAGES_NEW_PATH, c24_export_file_name), "w", encoding="UTF-8") as c24_export_file:
-    #         c24_export_file.write(c24_page)
-    # else:
-    #     log_string = "c24 scrape session unsuccessful!"
-    #     logging.error(log_string)
-    #     del log_string
+    # Do the scraping
+    logging.info(f"Executing c24 scraping with url {c24_request_url}")
+    try:
+        c24_page = uc_scrape_page(c24_request_url, chrome_driver)
+    except Exception as exception:
+        log_string = f"While trying to scrape c24, " \
+                     f"{type(exception).__name__} occurred: {exception}"
+        logging.exception(log_string)
+        del log_string
+        c24_page = ""
+
+    # Export results
+    if c24_page:
+        logging.info("Saving scraped data on disk.")
+        if not os.path.exists(SCRAPED_PAGES_NEW_PATH):
+            os.makedirs(SCRAPED_PAGES_NEW_PATH)
+
+        c24_export_filename = f"{datetime.today().strftime('%Y_%m_%d_%H%M')}_{C24_INDICATOR}"
+        c24_export_path = os.path.join(SCRAPED_PAGES_NEW_PATH, c24_export_filename)
+        with open(c24_export_path, "w", encoding="UTF-8") as c24_export_file:
+            c24_export_file.write(c24_page)
+        logging.info(f"Scraped data saved to {c24_export_path}")
+    else:
+        log_string = "c24 scrape session unsuccessful!"
+        logging.error(log_string)
+        del log_string
 
     # Close tor service (shuts down tor container)
     try:

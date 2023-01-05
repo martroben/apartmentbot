@@ -17,20 +17,15 @@ def get_ip(ip_api_url: str, tor_host: str = "127.0.0.1", socks_port: (int, str) 
     tor_proxies = {
         "http": f"socks5://{tor_host}:{socks_port}",
         "https": f"socks5://{tor_host}:{socks_port}"}
-    try:
-        if tor:
+    if tor:
+        try:
             response = requests.get(ip_api_url, proxies=tor_proxies)
-        else:
-            response = requests.get(ip_api_url)
-        ip = response.content.decode()
-        if not re.match(r"\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3}", ip):
-            raise UserWarning(f"'{ip}' is not in the standard IPv4 format.")
-        return ip
-
-    except Exception as exception:
-        log_string = f"While trying to check{' tor'*tor} ip, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
+        except requests.exceptions.ConnectionError:
+            raise ConnectionError("Can't establish tor connection. Is tor service started?") from None
+    else:
+        response = requests.get(ip_api_url)
+    ip = response.content.decode()
+    return ip
 
 
 def is_up(tor_host: str, socks_port: (int, str), ip_api_url: str) -> bool:
