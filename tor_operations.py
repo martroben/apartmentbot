@@ -25,6 +25,8 @@ def get_ip(ip_api_url: str, tor_host: str = "127.0.0.1", socks_port: (int, str) 
     else:
         response = requests.get(ip_api_url)
     ip = response.content.decode()
+    if not re.match(r"\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3}", ip):
+        raise UserWarning(f"IP API response '{ip}' doesn't look like an IPv4.")
     return ip
 
 
