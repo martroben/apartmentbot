@@ -1,3 +1,4 @@
+
 import socket
 import logging
 import requests
@@ -118,15 +119,3 @@ def control_port_command(command: str, tor_host: str, tor_control_port: (int, st
     control_port_socket.shutdown(socket.SHUT_WR)
     command_response = get_socket_response(control_port_socket)
     return command_response
-
-
-# if __name__ == "__main__":
-#     is_tor_ip_different = is_up("172.28.5.2", 9050, "http://api.ipify.org")
-#     is_tor_control_port_up = check_tor_control_port("172.28.5.2", 9051)
-#     logging.info(f"Tor IP different: {is_tor_ip_different}")
-#     logging.info(f"Tor control port accessible: {is_tor_control_port_up}")
-#
-#     logging.info(f"Original tor IP: {get_ip('http://api.ipify.org', '172.28.5.2', tor=True)}")
-#     # Change tor IP. Alternatively, SIGNAL SIGHUP could be used.
-#     print(control_port_command('SIGNAL NEWNYM', '172.28.5.2', 9051, 'tere'))
-#     logging.info(f"Changed tor IP: {get_ip('http://api.ipify.org', '172.28.5.2', tor=True)}")

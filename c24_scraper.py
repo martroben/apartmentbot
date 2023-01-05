@@ -1,15 +1,16 @@
-from collections.abc import Callable
-import re
-from requests import Request
-import random
+
 import os
+import re
+import random
 import logging
-from datetime import datetime
-from time import sleep
-from urllib.error import ContentTooShortError
 import undetected_chromedriver as uc
-import tor_operations
+from collections.abc import Callable
+from requests import Request
+from time import sleep
+from datetime import datetime
 from functools import partial, wraps
+from urllib.error import ContentTooShortError
+import tor_operations
 
 
 os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
@@ -30,6 +31,7 @@ def log_exceptions(context: str = ""):
     Description of attempted actions can be supplied by a 'context' variable.
     """
     def decorator(function):
+        @wraps(function)
         def inner_function(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
@@ -42,14 +44,14 @@ def log_exceptions(context: str = ""):
     return decorator
 
 
-def get_human_wait_time():
+def get_human_wait_time() -> float:
     """
     Get a "human-like" wait time (for navigating to new page etc.)
     :return: Values between 5 and 20.
     """
     average_wait_time_sec = 3
     wait_time = random.expovariate(lambd=1/average_wait_time_sec)
-    if wait_time < 3 or wait_time > 15:
+    if wait_time < 5 or wait_time > 20:
         wait_time = get_human_wait_time()
     return wait_time
 
@@ -220,7 +222,8 @@ if __name__ == "__main__":
     # Randomize scrape times
     run_probability = 0.3
     max_delay_time_hours = 4
-    if random.uniform(0,1) > run_probability:
+
+    if random.uniform(0, 1) > run_probability:
         tor_close_response = tor_operations.control_port_command(
             command="SIGNAL TERM",
             tor_host=TOR_HOST,
@@ -229,6 +232,7 @@ if __name__ == "__main__":
         logging.info(f"Tor service shut down with response {tor_close_response}.")
         logging.info("c24 scraper exited with no action (randomization)")
         exit()
+
     delay_time = random.uniform(0, max_delay_time_hours*3600)
     logging.info(f"c24 scraper sleeping for {round(delay_time/60, 2)} minutes before action (randomization)")
     for i in range(5):
@@ -244,7 +248,6 @@ if __name__ == "__main__":
     tor_operations.is_up = retry_function(tor_operations.is_up, interval_sec=8)
     logging.info("Checking if tor service is up.")
     tor_service_status = tor_operations.is_up(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
-
     if tor_service_status:
         logging.info("Tor service is up.")
     else:
@@ -271,11 +274,10 @@ if __name__ == "__main__":
         logging.exception(log_string)
         exit(1)
 
-    # Get request url
+    # Do the scraping
     c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS)
     c24_request_url = c24_request.prepare().url
 
-    # Do the scraping
     logging.info(f"Executing c24 scraping with url {c24_request_url}")
     try:
         c24_page = uc_scrape_page(c24_request_url, chrome_driver)
