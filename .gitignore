@@ -13,6 +13,9 @@ kv_sample1.txt
 kv_sample2.txt
 kv_sample3.txt
 kv_sample_front.txt
+tor_operations_legacy.py
+undetected_chromedriver_request.py
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
