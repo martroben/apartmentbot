@@ -10,8 +10,7 @@ from time import sleep
 from datetime import datetime
 from functools import partial, wraps
 from urllib.error import ContentTooShortError
-import tor_operations
-
+from tor import tor_operations
 
 os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
 os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"

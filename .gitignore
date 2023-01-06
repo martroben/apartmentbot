@@ -4,17 +4,19 @@ log/
 _TODO
 cf_requests.py
 control_port_password
-sample_response.txt
+log/sample_response.txt
 selenium_request.py
-succ
-entrypoint_sample.sh
-c24_sample.txt
-kv_sample1.txt
-kv_sample2.txt
-kv_sample3.txt
-kv_sample_front.txt
-tor_operations_legacy.py
-undetected_chromedriver_request.py
+log/succ
+legacy/entrypoint_sample.sh
+log/c24_sample.txt
+log/kv_sample1.txt
+log/kv_sample2.txt
+log/kv_sample3.txt
+log/kv_sample_front.txt
+legacy/tor_operations_legacy.py
+legacy/undetected_chromedriver_request.py
+legacy/
+legacy/config.py
 
 
 # Byte-compiled / optimized / DLL files

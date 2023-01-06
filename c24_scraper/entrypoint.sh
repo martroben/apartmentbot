@@ -7,8 +7,7 @@
 
 
 # Set CHROME_VERSION environmental variable
-chrome_version=$(google-chrome --version | grep -Po "\\d+" | head -1)
-export CHROME_VERSION=$chrome_version
+export CHROME_VERSION=$(google-chrome --version | grep -Po "\\d+" | head -1)
 # Alternative: chrome_version=$(google-chrome --version | sed 's/Google Chrome \([0-9]*\).*/\1/g')
 
 # Start Xvfb and keep it running

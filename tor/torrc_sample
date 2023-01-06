@@ -1,0 +1,5 @@
+SocksPort 172.28.5.2:9050
+ControlPort 172.28.5.2:9051
+SocksPolicy accept 172.28.5.3
+SocksPolicy reject *
+HashedControlPassword 16:1B1793F08841C6596045428ECC794B9F236B2584892AC2C81B051F27BC
