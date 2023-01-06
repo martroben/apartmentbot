@@ -10,18 +10,7 @@ from time import sleep
 from datetime import datetime
 from functools import partial, wraps
 from urllib.error import ContentTooShortError
-from tor import tor_operations
-
-os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
-os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
-os.environ["TOR_HOST"] = "127.0.0.1"
-os.environ["SOCKS_PORT"] = "9050"
-os.environ["TOR_CONTROL_PORT"] = "9051"
-os.environ["C24_BASE_URL"] = "https://m-api.city24.ee/et_EE/search/realties"
-os.environ["C24_AREAS"] = "3166"  # 1535 - Kristiine
-os.environ["C24_N_ROOMS"] = "3"
-os.environ["C24_INDICATOR"] = "c24"
-os.environ["IP_REPORTER_API_URL"] = "https://api.ipify.org"
+import tor_operations
 
 
 def log_exceptions(context: str = ""):
