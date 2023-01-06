@@ -3,7 +3,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 # Script to install a certain version of Chrome.
 # Might be desirable in scraping, because using latest version of Chrome
-# makes the scraper more easily identifyable as a bot.
+# makes the scraper more easily identifiable as a bot.
 # (Not a lot of real users have the latest browser version.)
 # Usage: ./chrome_install [version_number]
 
