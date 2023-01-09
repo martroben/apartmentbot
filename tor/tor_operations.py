@@ -31,9 +31,9 @@ def get_ip(ip_api_url: str, tor_host: str = "127.0.0.1", socks_port: (int, str) 
     return ip
 
 
-def is_up(tor_host: str, socks_port: (int, str), ip_api_url: str) -> bool:
+def check_availability(tor_host: str, socks_port: (int, str), ip_api_url: str) -> bool:
     """
-    Check if IP via tor proxy is different from regular IP.
+    Check if IP via tor proxy is different from regular IP. (Indication of whether tor service is up.)
 
     :param tor_host: IP of tor service.
     :param socks_port: Port number of the socks5 port.
@@ -89,8 +89,8 @@ def check_tor_control_port(tor_host: str, tor_control_port: (int, str)) -> bool:
     return bool(success_pattern.search(response))
 
 
-def control_port_command(command: str, tor_host: str, tor_control_port: (int, str),
-                         tor_control_port_password: (str, None) = None) -> str:
+def send_control_port_command(command: str, tor_host: str, tor_control_port: (int, str),
+                              tor_control_port_password: (str, None) = None) -> str:
     """
     Send a command to tor control port.
     Additional info: https://gitweb.torproject.org/torspec.git/tree/control-spec.txt

@@ -25,7 +25,7 @@ def log_exceptions(context: str = ""):
 
 def get_sqlite_data_type(python_object: object) -> str:
     """
-    Get sqlite data type of input object.
+    Get SQLite data type of input object.
 
     :param python_object: Any Python object.
     :return: SQLite data type of input object.

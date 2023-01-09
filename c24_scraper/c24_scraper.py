@@ -102,7 +102,7 @@ def get_chrome_driver(options: uc.ChromeOptions = uc.ChromeOptions(),
 
 
 @retry_function(interval_sec=get_human_wait_time)
-def uc_scrape_page(url: str, driver: uc.Chrome) -> str:
+def scrape_page_with_uc(url: str, driver: uc.Chrome) -> str:
     """
     Scrape the target url with uc.
 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     max_delay_time_hours = 4
 
     if random.uniform(0, 1) > run_probability:
-        tor_close_response = tor_operations.control_port_command(
+        tor_close_response = tor_operations.send_control_port_command(
             command="SIGNAL TERM",
             tor_host=TOR_HOST,
             tor_control_port=TOR_CONTROL_PORT,
@@ -233,9 +233,10 @@ if __name__ == "__main__":
     socks_socket = f"socks5://{TOR_HOST}:{SOCKS_PORT}"
 
     # Check if tor is up
-    tor_operations.is_up = retry_function(tor_operations.is_up, interval_sec=8)
     logging.info("Checking if tor service is up.")
-    tor_service_status = tor_operations.is_up(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
+    # Apply retry decorator
+    tor_operations.check_availability = retry_function(tor_operations.check_availability, interval_sec=8)
+    tor_service_status = tor_operations.check_availability(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
     if tor_service_status:
         logging.info("Tor service is up.")
     else:
@@ -266,9 +267,9 @@ if __name__ == "__main__":
     c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS)
     c24_request_url = c24_request.prepare().url
 
-    logging.info(f"Executing c24 scraping with url {c24_request_url}")
+    logging.info(f"Scraping c24 url {c24_request_url}")
     try:
-        c24_page = uc_scrape_page(c24_request_url, chrome_driver)
+        c24_page = scrape_page_with_uc(c24_request_url, chrome_driver)
     except Exception as exception:
         log_string = f"While trying to scrape c24, " \
                      f"{type(exception).__name__} occurred: {exception}"
@@ -295,7 +296,7 @@ if __name__ == "__main__":
     # Close tor service (shuts down tor container)
     try:
         if TOR_CONTROL_PORT is not None:
-            tor_close_response = tor_operations.control_port_command(
+            tor_close_response = tor_operations.send_control_port_command(
                 command="SIGNAL TERM",
                 tor_host=TOR_HOST,
                 tor_control_port=TOR_CONTROL_PORT,
