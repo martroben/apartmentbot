@@ -185,7 +185,7 @@ if __name__ == "__main__":
         style="{",
         level=logging.INFO)
 
-    logging.info(f"\n\n\n{'-*-'*10} c24 scraper started {'-*-'*10}\n")
+    logging.info(f"\n\n\n{'-*-'*10} C24 SCRAPER STARTED {'-*-'*10}\n")
 
     # Load environmental variables
     try:
@@ -202,9 +202,9 @@ if __name__ == "__main__":
         TOR_CONTROL_PORT = os.environ.get("TOR_CONTROL_PORT")
         TOR_CONTROL_PORT_PASSWORD = os.environ.get("TOR_CONTROL_PORT_PASSWORD")
     except KeyError as error:
-        log_string = f"While load environmental variables " \
+        log_string = f"While loading environmental variables " \
                      f"{type(error).__name__} occurred: {error}. Exiting!"
-        logging.exception(log_string)
+        logging.error(log_string)
         exit(1)
 
     # Randomize scrape times

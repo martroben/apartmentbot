@@ -3,15 +3,14 @@ import os
 import re
 import time
 import json
-import logging
 import parsel
+import logging
 from calendar import timegm
+
 from data_classes import Listing
 
-os.environ["C24_INDICATOR"] = "c24"
 
-
-def c24_load_json_data(file_path: str) -> list[dict]:
+def get_json_data(file_path: str) -> list[dict]:
     """
     Loads data from a c24 exported page source file and extracts the json component.
 
@@ -58,16 +57,17 @@ def combine_street_address(street: str, house_number: (str, int), apartment_numb
     return street_house_apartment
 
 
-def get_listing_details(data: dict) -> Listing:
+def get_listing(data: dict) -> Listing:
     """
-    Extracts values from a single c24 website listing item.
+    Extracts values from a c24 scraped page json.
 
-    :param data: json dict from c24 API call
+    :param data: json dict from c24 scraped page
     :return: Listing with listing info
     """
     listing = Listing()
     listing.portal = os.environ["C24_INDICATOR"]
     listing.active = 1
+    listing.reported = 0
 
     # Combine address to single string
     listing.apartment_number = data["address"]["apartment_number"]
@@ -140,20 +140,3 @@ def get_listing_details(data: dict) -> Listing:
         del log_string
 
     return listing
-
-
-new_scraped_pages_dir = "./log/scraped_pages/new/"
-c24_export_file_names = [file for file in os.listdir(new_scraped_pages_dir)
-                         if re.search(rf"{os.environ['C24_INDICATOR']}$", file)]
-
-c24_export_file_paths = [os.path.join(new_scraped_pages_dir, filename) for filename in c24_export_file_names]
-
-# Use a set to get unique listings
-c24_listings = set()
-for file_path in c24_export_file_paths:
-    c24_page_json = c24_load_json_data(file_path)
-    for listing in c24_page_json:
-        c24_listings.add(get_listing_details(listing))
-
-for listing in sorted(c24_listings, key=lambda x: x.address):
-    print(listing)
