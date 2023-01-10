@@ -36,6 +36,9 @@ class Listing:
     date_scraped = float()
     date_unlisted = float()
 
+    # Variables to be used for comparing whether listings are equal.
+    __eq_variables__ = ["id", "portal", "address", "area_m2", "price_eur"]
+
     def __setattr__(self, key, value):
         """
         Check if variable is allowed and typecast it to the correct type.
@@ -67,16 +70,12 @@ class Listing:
 
     def __eq__(self, other):
         """
-        If  compared to another Listing object, first compares id-s.
-        If these match, also compares portal, address, area_m2 and price_eur variables and
-        only return true if these match.
+        If  compared to another Listing object, return true only if all variables in the dunder variable
+        __eq_variables__ match.
         """
         if isinstance(other, Listing):
-            if self.id == other.id:
-                variables_match = (self.portal, self.address, self.area_m2, self.price_eur) == \
-                                  (other.portal, other.address, other.area_m2, other.price_eur)
-                return variables_match
-            return False
+            return all([self.__getattribute__(element) == other.__getattribute__(element)
+                        for element in self.__eq_variables__])
         return NotImplemented
 
     def __hash__(self):

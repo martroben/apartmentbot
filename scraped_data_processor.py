@@ -96,8 +96,6 @@ except KeyError as error:
 new_scraped_data_file_paths = [os.path.join(NEW_SCRAPED_DATA_DIR, filename)
                                for filename in os.listdir(NEW_SCRAPED_DATA_DIR)]
 
-sql_connection = sqlite3.connect(SQL_DATABASE_PATH)
-
 for scraped_data_file_path in new_scraped_data_file_paths:
     logging.info(f"Processing scraped data file {scraped_data_file_path}.")
     scraped_listings = set()
@@ -123,7 +121,7 @@ for scraped_data_file_path in new_scraped_data_file_paths:
 
     try:
         logging.info(f"Establishing sql connection to {SQL_DATABASE_PATH}")
-        ##### sql_connection = sqlite3.connect(SQL_DATABASE_PATH)
+        sql_connection = sqlite3.connect(SQL_DATABASE_PATH)
         if not sqlite_operations.table_exists(SQL_LISTINGS_TABLE_NAME, sql_connection):
             logging.info(f"No sql table by the name {SQL_LISTINGS_TABLE_NAME}. Creating.")
             sqlite_operations.create_listings_table(SQL_LISTINGS_TABLE_NAME, sql_connection)
@@ -132,7 +130,7 @@ for scraped_data_file_path in new_scraped_data_file_paths:
         sql_active_listings = sqlite_operations.read_data(
             table=SQL_LISTINGS_TABLE_NAME,
             connection=sql_connection,
-            where="active = 0")
+            where="active = 1")
 
         # Insert new listings to sql
         existing_active_listings = [Listing().make_from_dict(sql_listing) for sql_listing in sql_active_listings]
@@ -147,16 +145,18 @@ for scraped_data_file_path in new_scraped_data_file_paths:
                 connection=sql_connection)
 
         # Set removed listings to inactive
-        ###### Can't do it by id only, otherwise active listings with same id will also be inactivated
-        unlisted_listings_ids = [listing.id for listing in existing_active_listings if listing not in scraped_listings]
-        logging.info(f"{len(unlisted_listings_ids)} existing active listings are no longer present in scraped data. "
+        unlisted_listings = [listing for listing in existing_active_listings if listing not in scraped_listings]
+        logging.info(f"{len(unlisted_listings)} existing active listings are no longer present in scraped data. "
                      f"Setting these listings to inactive in sql.")
-        for listing_id in unlisted_listings_ids:
-            sqlite_operations.deactivate_id(
-                listing_id=listing_id,
+        for listing in unlisted_listings:
+            sqlite_operations.deactivate_listing(
                 table=SQL_LISTINGS_TABLE_NAME,
-                connection=sql_connection)
-
+                connection=sql_connection,
+                **{variable: listing.__getattribute__(variable) for variable in listing.__eq_variables__})
+            sqlite_operations.set_unlisting_date(
+                table=SQL_LISTINGS_TABLE_NAME,
+                connection=sql_connection,
+                **{variable: listing.__getattribute__(variable) for variable in listing.__eq_variables__})
         sql_connection.commit()
 
         logging.info(f"Processing file {scraped_data_file_path} is completed. Archiving file.")

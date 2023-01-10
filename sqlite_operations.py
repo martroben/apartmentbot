@@ -1,26 +1,9 @@
 
 import sqlite3
-from data_classes import Listing
 import logging
 import time
 
-
-def log_exceptions(context: str = ""):
-    """
-    Decorator function to log exceptions occurring in a function.
-    Description of attempted actions can be supplied by a 'context' variable.
-    """
-    def decorator(function):
-        def inner_function(*args, **kwargs):
-            try:
-                return function(*args, **kwargs)
-            except Exception as exception:
-                log_string = f"In function {function.__name__}, " \
-                             f"{type(exception).__name__} exception occurred: {exception}" \
-                             f"{bool(context)*f', while {context}'}."
-                logging.exception(log_string)
-        return inner_function
-    return decorator
+from data_classes import Listing
 
 
 def get_sqlite_data_type(python_object: object) -> str:
@@ -43,7 +26,6 @@ def get_sqlite_data_type(python_object: object) -> str:
         return "BLOB"
 
 
-@log_exceptions()
 def table_exists(name: str, connection: sqlite3.Connection) -> bool:
     """
     Check if table exists in SQLite.
@@ -59,7 +41,6 @@ def table_exists(name: str, connection: sqlite3.Connection) -> bool:
     return table_exists
 
 
-@log_exceptions()
 def create_listings_table(table: str, connection: sqlite3.Connection) -> None:
     """
     Creates table for listings to SQLite
@@ -107,7 +88,6 @@ def insert_listing(listing: Listing, table: str, connection: sqlite3.Connection)
     return
 
 
-@log_exceptions()
 def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = None) -> list[dict]:
     """
     Get data from a SQL table.
@@ -133,23 +113,42 @@ def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = N
     return data_rows
 
 
-@log_exceptions()
-def deactivate_id(listing_id: str, table: str, connection: sqlite3.Connection, activate: bool = False) -> None:
+def deactivate_listing(table: str, connection: sqlite3.Connection, activate: bool = False, **kwargs) -> None:
     """
-    Sets the 'active' column value and 'date_unlisted' value for a row in SQL table, by listing id.
-
-    :param listing_id: id of the listing that is going to be changed.
-    :param table: Listing table name.
+    Sets the 'active' column value for a row in SQL table.
+    :param table: Listings table name.
     :param connection: SLQ connection object.
-    :param activate: Set to True if a listing needs to be activated instead of deactivated.
+    :param activate: True if a listing needs to be activated instead of deactivated.
+    :param kwargs: Key-value pairs to identify listing that needs to be changed
     :return: None
     """
-    if activate:
-        update_table_command = f"UPDATE {table} SET active = {int(activate)} WHERE id = {listing_id}"
-    else:
-        update_table_command = f"UPDATE {table} SET active = {int(activate)}, " \
-                               f"date_unlisted = {round(time.time(), 0)} WHERE id = {listing_id}"
+    where_condition_elements = list()
+    for key, value in kwargs.items():
+        # Quote values that are strings
+        where_condition_elements += [f'{key} = "{value}"'] if isinstance(value, str) else [f"{key} = {value}"]
+    where_condition = " AND ".join(where_condition_elements)
+    update_table_command = f"UPDATE {table} SET active = {int(activate)} WHERE {where_condition};"
+    sql_cursor = connection.cursor()
+    sql_cursor.execute(update_table_command)
+    return
 
+
+def set_unlisting_date(table: str, connection: sqlite3.Connection,
+                       date: float = round(time.time(), 0), **kwargs) -> None:
+    """
+    Sets the 'date_unlisted' column value for a row in SQL table.
+    :param table: Listings table name.
+    :param connection: SLQ connection object.
+    :param date: Unlisting time in epoch format.
+    :param kwargs: Key-value pairs to identify listing that needs to be changed
+    :return: None
+    """
+    where_condition_elements = list()
+    for key, value in kwargs.items():
+        # Quote values that are strings
+        where_condition_elements += [f'{key} = "{value}"'] if isinstance(value, str) else [f"{key} = {value}"]
+    where_condition = " AND ".join(where_condition_elements)
+    update_table_command = f"UPDATE {table} SET date_unlisted = {date} WHERE {where_condition};"
     sql_cursor = connection.cursor()
     sql_cursor.execute(update_table_command)
     return
