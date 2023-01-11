@@ -217,7 +217,7 @@ if __name__ == "__main__":
             tor_host=TOR_HOST,
             tor_control_port=TOR_CONTROL_PORT,
             tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
-        logging.info(f"Tor service shut down with response {tor_close_response}.")
+        logging.info(f"Tor service shut down with response {tor_close_response}")
         logging.info("c24 scraper exited with no action (randomization)")
         exit()
 

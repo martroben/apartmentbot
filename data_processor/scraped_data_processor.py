@@ -88,6 +88,10 @@ if __name__ == "__main__":
     new_scraped_data_file_paths = [os.path.join(SCRAPED_PAGES_NEW_PATH, filename)
                                    for filename in os.listdir(SCRAPED_PAGES_NEW_PATH)]
 
+    if not new_scraped_data_file_paths:
+        logging.warning(f"No scraped data files found in {SCRAPED_PAGES_NEW_PATH}. Exiting!")
+        exit(0)
+
     for scraped_data_file_path in new_scraped_data_file_paths:
         logging.info(f"Processing scraped data file {scraped_data_file_path}.")
         scraped_listings = set()
@@ -115,7 +119,7 @@ if __name__ == "__main__":
             continue
 
         # Connect to sql
-        if not os.path.exists(SQL_DATABASE_PATH):
+        if not os.path.exists(os.path.dirname(SQL_DATABASE_PATH)):
             os.makedirs(os.path.dirname(SQL_DATABASE_PATH))
         try:
             logging.info(f"Establishing sql connection to {SQL_DATABASE_PATH}")
