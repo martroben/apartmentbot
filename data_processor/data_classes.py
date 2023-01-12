@@ -6,13 +6,13 @@ import re
 def get_class_variables(class_object: (object, str)) -> dict:
     """
     Helper function to get class variables (without dunder variables and functions.)
-
     :param class_object: Class object or object name string
     :return: dict with names and values of class variables
     """
     if isinstance(class_object, str):
         class_object = eval(class_object)
-    return {key: value for key, value in class_object.__dict__.items() if not key.startswith("__") and not callable(value)}
+    return {key: value for key, value in class_object.__dict__.items()
+            if not key.startswith("__") and not callable(value)}
 
 
 class Listing:
@@ -90,9 +90,7 @@ class Listing:
 
     def assign_random_id(self):
         """
-        Generates (hopefully unique) id based on listing address and area_m2
-
-        :param listing: Listing object
+        Generates (hopefully unique) id based on listing address and area_m2.
         :return: 7-character ID starting with X
         """
         hash_length = 7

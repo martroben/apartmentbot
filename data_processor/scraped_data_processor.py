@@ -1,4 +1,5 @@
 
+import sys
 import os
 import random
 import re
@@ -6,29 +7,23 @@ import logging
 import sqlite3
 import shutil
 from datetime import datetime
+from dotenv import dotenv_values
 
+sys.path.append("/home/mart/Python/apartmentbot/data_processor")
 import sqlite_operations
 import c24_data_operations
 from data_classes import Listing
 
 
-def get_unique_id_listings(listings: (list[Listing], set[Listing])) -> set[Listing]:
-    """
-    Check input for Listings with identical id-s. Drop the one that has earlier date_listed parameter.
-    :param listings: Set of Listing objects
-    :return: Set of Listing objects with unique id-s.
-    """
-    unique_id_listings = dict()
-    for listing in listings:
-        if listing.id in unique_id_listings and unique_id_listings[listing.id].date_listed > listing.date_listed:
-            continue
-        unique_id_listings[listing.id] = listing
-    return {listing for listing in unique_id_listings.values()}
+#############
+# Functions #
+#############
 
 
 def validate_scraped_data(listings: (set[Listing], list[Listing])) -> bool:
     """
     Validate that a random sample of listings has address information.
+
     :param listings: A set of listings
     :return: True if any listings in a random sample have address information. False otherwise
     """
@@ -41,6 +36,7 @@ def archive_scraped_data_file(file_path: str, archive_dir_path: str, not_used: b
     """
     Moves file to another directory and optionally add "NOT_USED_" to file name.
     Creates destination directory if it doesn't exist.
+
     :param file_path: Source file path
     :param archive_dir_path: Destination directory path
     :param not_used: Add "NOT_USED_" to filename if True
@@ -55,6 +51,20 @@ def archive_scraped_data_file(file_path: str, archive_dir_path: str, not_used: b
         destination_path = archive_dir_path
     shutil.move(file_path, destination_path)
 
+
+###########
+# Execute #
+###########
+
+env_file_path = ".env"
+env_variables = dotenv_values(env_file_path)
+
+os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
+os.environ["C24_INDICATOR"] = env_variables["C24_INDICATOR"]
+os.environ["SQL_DATABASE_PATH"] = "/home/mart/Python/apartmentbot/sql.db"
+os.environ["SQL_LISTINGS_TABLE_NAME"] = env_variables["SQL_LISTINGS_TABLE_NAME"]
+os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
+os.environ["SCRAPED_PAGES_PROCESSED_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/processed"
 
 if __name__ == "__main__":
     # Set logging
@@ -93,6 +103,7 @@ if __name__ == "__main__":
         exit(0)
 
     for scraped_data_file_path in new_scraped_data_file_paths:
+
         logging.info(f"Processing scraped data file {scraped_data_file_path}.")
         scraped_listings = set()
 

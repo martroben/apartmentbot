@@ -17,7 +17,8 @@ legacy/tor_operations_legacy.py
 legacy/undetected_chromedriver_request.py
 legacy/
 legacy/config.py
-
+.env
+sql.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -37,8 +37,8 @@ def table_exists(name: str, connection: sqlite3.Connection) -> bool:
     check_table_query = f"SELECT EXISTS (SELECT name FROM sqlite_master WHERE type='table' AND name='{name}');"
     sql_cursor = connection.cursor()
     query_result = sql_cursor.execute(check_table_query)
-    table_exists = bool(query_result.fetchone()[0])
-    return table_exists
+    table_found = bool(query_result.fetchone()[0])
+    return table_found
 
 
 def create_listings_table(table: str, connection: sqlite3.Connection) -> None:
@@ -116,6 +116,7 @@ def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = N
 def deactivate_listing(table: str, connection: sqlite3.Connection, activate: bool = False, **kwargs) -> None:
     """
     Sets the 'active' column value for a row in SQL table.
+
     :param table: Listings table name.
     :param connection: SLQ connection object.
     :param activate: True if a listing needs to be activated instead of deactivated.
@@ -137,6 +138,7 @@ def set_unlisting_date(table: str, connection: sqlite3.Connection,
                        date: float = round(time.time(), 0), **kwargs) -> None:
     """
     Sets the 'date_unlisted' column value for a row in SQL table.
+
     :param table: Listings table name.
     :param connection: SLQ connection object.
     :param date: Unlisting time in epoch format.

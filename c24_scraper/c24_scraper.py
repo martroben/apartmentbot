@@ -10,7 +10,13 @@ from time import sleep
 from datetime import datetime
 from functools import partial, wraps
 from urllib.error import ContentTooShortError
+
 import tor_operations
+
+
+#############
+# Functions #
+#############
 
 
 def log_exceptions(context: str = ""):
@@ -35,6 +41,7 @@ def log_exceptions(context: str = ""):
 def get_human_wait_time() -> float:
     """
     Get a "human-like" wait time (for navigating to new page etc.)
+
     :return: Values between 5 and 20.
     """
     average_wait_time_sec = 3
@@ -162,6 +169,7 @@ def get_c24_request(n_rooms: str, areas: str) -> Request:
 def get_chrome_version() -> str:
     """
     Read Chrome version from the Last Version file in Chrome config files.
+    
     :return: String of the major version (i.e. 106 from 106.0.5249.119-1)
     """
     chrome_version_file_path = os.path.join(os.path.expanduser("~"), ".config/google-chrome/Last Version")
@@ -171,6 +179,10 @@ def get_chrome_version() -> str:
         version_main = version_main_pattern.search(version_string)[0]
     return version_main
 
+
+###########
+# Execute #
+###########
 
 if __name__ == "__main__":
 
