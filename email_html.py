@@ -168,6 +168,7 @@ print(listing_to_html(unreported_listings[0]))
 print(get_email_html(unreported_listings))
 
 
+
 reader = csv.DictReader("""\
 id,portal,active,url,image_url,address,n_rooms,area_m2,price,date_added,date_scraped,date_removed,year_built
 2028821,c24,1,https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-kopli-tn/2960653,https://c24ee.img-bcg.eu/object/11/5191/2751785191.jpg,"Harju maakond, Tallinn, Põhja-Tallinna linnaosa, Kopli tn 64-5",3,62.4,307944.0,1662132928,1669651864.8203578,0.0,1999

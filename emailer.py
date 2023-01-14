@@ -1,7 +1,14 @@
-import smtplib, ssl, os, logging, re
+
+import smtplib, ssl, os, logging, re, base64, random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from dotenv import dotenv_values
+
+
+def encode_text(text):
+    byte_string = text.encode("UTF-8")
+    encoded_text = base64.b64encode(byte_string)
+    return f"=?UTF-8?B?{encoded_text.decode('ascii')}?="
 
 
 def parse_username(email_address):
@@ -72,8 +79,14 @@ emailer = Emailer(
     smtp_port=EMAIL_SMTP_SERVER_PORT,
     smtp_password=EMAIL_PASSWORD)
 
+ascii_icons = ["\U0001F306", "\U0001F388", "\U0001F3E0", "\U0001F449", "\U0001F46A",
+               "\U0001F4E2", "\U0001F525", "\U0001F941", "\U0001F942", "\U0001F916",
+               "\U0001F511", "\U0001F4B6", "\U0001F490", "\U0001F3E1", "\U0001F3E2",
+               "\U0001F339", "\U0001F307"]
+
 emailer.send(
     sender=EMAIL_SENDER_ADDRESS,
     recipients=EMAIL_RECIPIENTS_ADDRESSES,
-    subject="All your base is belong to us!",
+    subject="{} All your base is belong to us!".format(encode_text("".join(random.choices(ascii_icons, k=2)))),
     html_content=email_html)
+
