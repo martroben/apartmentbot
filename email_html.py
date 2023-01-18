@@ -186,3 +186,18 @@ print(get_email_html(listings))
 
 # TO DO:
 # Reverse html heading (street & apt first)
+
+"""
+<html>
+    <head>
+        <title>Apartment listings</title>
+    </head>
+    <body>
+        <ul class="article-list-vertical" style="list-style: none;\
+         margin: 0 auto; max-width: 600px; text-align: center; padding: 0;">
+            <li style="display: block; box-sizing: border-box; border-radius: 3px; text-align: left; box-shadow: 1px 3px 1px 0 rgba(0, 0, 0, 0.08); border: 1px solid #cfcfcf; overflow: hidden; background-color: #fff; font: normal 13px sans-serif; margin-bottom: 40px; max-width: 575px;"> <a href="https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-mootori/8592646" style="float: left; width: 200px; height: 200px; display: block; background-size: cover; background-image: url('https://c24ee.img-bcg.eu/object/11/6925/1459866925.jpg');"> </a> <div style="float: left; box-sizing: border-box; max-width: 350px; padding: 20px;"> <h2 style="font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0;"> <a href="https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-mootori/8592646" style="color: #2b2b2b; text-decoration: none;"> &#129302 Harju maakond, Tallinn, Põhja-Tallinna linnaosa, Mootori 7/2-8 </a> </h2> <p style="line-height: 20px; color: #5d5d5d; margin: 20px 0;"> &emsp;Price: 495000 eur <br> &emsp;Rooms: 3 <br> &emsp;Area: 85.7 m2 <br> &emsp;Construction year: &nbsp;-&nbsp; <br> &emsp;Date listed: 2022-12-19 </p> </div> </li>
+            <li style="display: block; box-sizing: border-box; border-radius: 3px; text-align: left; box-shadow: 1px 3px 1px 0 rgba(0, 0, 0, 0.08); border: 1px solid #cfcfcf; overflow: hidden; background-color: #fff; font: normal 13px sans-serif; margin-bottom: 40px; max-width: 575px;"> <a href="https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-mootori/8592646" style="float: left; width: 200px; height: 200px; display: block; background-size: cover; background-image: url('https://c24ee.img-bcg.eu/object/11/6925/1459866925.jpg');"> </a> <div style="float: left; box-sizing: border-box; max-width: 350px; padding: 20px;"> <h2 style="font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0;"> <a href="https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-mootori/8592646" style="color: #2b2b2b; text-decoration: none;"> &#129302 Harju maakond, Tallinn, Põhja-Tallinna linnaosa, Mootori 7/2-8 </a> </h2> <p style="line-height: 20px; color: #5d5d5d; margin: 20px 0;"> &emsp;Price: 495000 eur <br> &emsp;Rooms: 3 <br> &emsp;Area: 85.7 m2 <br> &emsp;Construction year: &nbsp;-&nbsp; <br> &emsp;Date listed: 2022-12-19 </p> </div> </li>
+        </ul>
+    </body>
+</html>
+"""

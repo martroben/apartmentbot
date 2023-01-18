@@ -1,0 +1,45 @@
+
+<li class="listing" style="
+    display: flex;
+    box-sizing: border-box;
+    border-radius: 5px;
+    text-align: left;
+    border: 1px solid #cfcfcf;
+    overflow: hidden;
+    background-color: #fff;
+    margin-bottom: 20px;
+    max-width: 93%;">
+    <a class="listing_picture" href="{url}" style="
+        width: 175px;
+        height: 175px;
+        display: block;
+        margin: 0px;
+        background-size: cover;
+        background-image: url('{image_url}');">
+    </a>
+    <div class="listing_description" style="
+        margin: auto;
+        max-width: 62%;">
+        <h2 style="
+            font: bold 16px sans-serif;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #1f7a8c;">
+            <a href="{url}" style="
+                color: #2b2b2b;
+                text-decoration: none;">{heading_icon} {heading}
+            </a>
+        </h2>
+        <p style="
+        color: #5d5d5d;
+        font: normal 13px/1.6em sans-serif;
+        margin-left: 10%;">
+            Price: {price_eur} eur<br>
+            Rooms: {n_rooms}<br>
+            Area: {area_m2} m2<br>
+            Construction year: {construction_year}<br>
+            Date listed: {date_listed}
+        </p>
+    </div>
+</li>

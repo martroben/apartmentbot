@@ -1,0 +1,136 @@
+<!--
+# https://www.emailonacid.com/blog/article/email-development/12_things_you_must_know_when_developing_for_gmail_and_gmail_mobile_apps-2/
+-->
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Apartmentbot results</title>
+	</head>
+	<body style="
+			margin: 0px;
+			max-width: 650px">
+        <div class="email_preheader" style="
+            display: none !important;">
+            {preheader_text}
+        </div>
+		<div class="top_spacer" style="
+			height: 40px;
+			background: #f5f5f5;">
+		</div>
+        <div class="colour_bar" style="
+            height: 100px;
+            background: linear-gradient(90deg, #1f7a8c, #283d3b);
+            display: flex;">
+            <div class="colour_bar_circle" style="
+            	border-radius: 50%;
+                width: 80px;
+                height: 80px;
+                padding: 0px;
+                background: #f5f5f5;
+                display: flex;
+                margin-left: 5%;
+                margin-bottom: auto;
+                margin-top: auto;">
+                <div class="colour_bar_icon" style="
+                	font: normal 43px/0em sans-serif;
+                    margin: auto;">
+                	{colourbar_icon}
+                </div>
+            </div>
+            <div class="colour_bar_text" style="
+            		margin-top: auto;
+                    margin-bottom: auto;
+                    margin-left: 15%;
+                    overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;">
+            	<p style="
+                	font: bold 36px/0em sans-serif;
+                	color: #f5f5f5;
+                    margin-top: 9%;
+                    margin-bottom: 2%;">
+                    {colourbar_heading}
+                </p><br>
+                <p style="
+                	font: normal 16px/0em sans-serif;
+                	color: #f5f5f5;
+                    margin-top: 0%;
+                    text-align: center;">
+                    {colourbar_subheading}
+                </p>
+            </div>
+		</div>
+		<div class="pre_listing_spacer" style="
+			max-width: 100%;
+			height: 40px;
+			background: #f5f5f5;">
+		</div>
+		<ul class="listings" style="
+			max-width: 100%;
+			background: #f5f5f5;
+            margin: 0px;
+            padding-bottom: 30px;">
+			{listings}
+		</ul>
+        <div class="signature" style="
+        	display: flex;
+        	margin-top: 0px;
+			height: 80px;
+            width: 100%;
+			background: #f5f5f5;">
+            <div class="signature_prestripe_spacer" style="
+            	height: 80px;
+            	width: 13%;
+            	background: #f5f5f5;">
+			</div>
+            <div class="signature_stripe" style="
+            	height: 80px;
+           		width: 1%;
+            	background: linear-gradient(180deg, #1f7a8c, #283d3b);">
+            </div>
+            <div class="signature_poststripe_spacer" style="
+            	height: 80px;
+            	width: 3%;
+            	background: #f5f5f5;">
+			</div>
+            <div class="signature_box" style="
+            	height: 80px;
+            	width: 70%;
+            	background: #f5f5f5;">
+                <p style="
+                	font: normal 12px sans-serif;
+                    color: gray;
+                	margin-left: 3%;
+                	margin-top: 2%;
+                    margin-bottom: 0%;">
+                    Yours truly,
+                </p>
+                <a href="{signature_name_url}"
+                	style="
+                	font: bold 14px arial;
+                    text-decoration: none;
+                    color: #1f7a8c;
+                	margin-left: 3%;
+                	margin-top: 1%;
+                    margin-bottom: 0%;">
+                    {signature_name}
+                </a>
+                <p style="
+                	font: italic 10px sans-serif;
+                	margin-left: 0%;
+                	margin-top: 2%;
+                    color: gray;">
+                    {signature_slogan}
+			</div>
+		</div>
+        <div class="bottom_spacer" style="
+			height: 60px;
+			background: #f5f5f5;">
+		</div>
+        <div class="bottom_line" style="
+			height: 10px;
+			background: linear-gradient(90deg, #1f7a8c, #283d3b);">
+		</div>
+	</body>
+</html>
