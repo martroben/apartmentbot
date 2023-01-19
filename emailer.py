@@ -1,8 +1,23 @@
 
-import smtplib, ssl, os, logging, re, base64, random
+# standard
+import base64
+import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import logging
+import os
+import random
+import re
+import sqlite3
+import smtplib
+import ssl
+import sys
+# external
 from dotenv import dotenv_values
+# local
+sys.path.append("/home/mart/Python/apartmentbot/data_processor")
+import sqlite_operations
+from data_classes import Listing
 
 
 def ascii_encode_text(text):
@@ -41,35 +56,31 @@ class Emailer:
             server.send_message(self.email, from_addr=sender, to_addrs=recipients)
 
 
-################################
-# Load environmental variables #
-################################
+def get_listing_html(listing: Listing, listing_template: str, interesting: bool = False) -> str:
+    """
+    Turns Listing object to e-mailable HTML string.
 
-env_file_path = "/home/mart/Python/apartmentbot/.env"
-env_variables = dotenv_values(env_file_path)
-
-os.environ["EMAIL_SENDER_ADDRESS"] = env_variables["EMAIL_SENDER_ADDRESS"]
-os.environ["EMAIL_RECIPIENTS_ADDRESSES"] = env_variables["EMAIL_RECIPIENTS_ADDRESSES"]
-os.environ["EMAIL_PASSWORD"] = env_variables["EMAIL_PASSWORD"]
-os.environ["EMAIL_SMTP_SERVER_URL"] = env_variables["EMAIL_SMTP_SERVER_URL"]
-os.environ["EMAIL_SMTP_SERVER_PORT"] = env_variables["EMAIL_SMTP_SERVER_PORT"]
-
-try:
-    EMAIL_SMTP_SERVER_URL = os.environ["EMAIL_SMTP_SERVER_URL"]
-    EMAIL_SMTP_SERVER_PORT = int(os.environ["EMAIL_SMTP_SERVER_PORT"])
-    EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
-    EMAIL_SENDER_ADDRESS = os.environ["EMAIL_SENDER_ADDRESS"]
-    EMAIL_RECIPIENTS_ADDRESSES = os.environ["EMAIL_RECIPIENTS_ADDRESSES"]
-except KeyError as error:
-    log_string = f"While loading environmental variables " \
-                 f"{type(error).__name__} occurred: {error}. Exiting!"
-    logging.error(log_string)
-    exit(1)
+    :param listing: Listing object
+    :param listing_template: Listing e-mail template
+    :param interesting: Should the listing be highlighted in the e-mail?
+    :return: HTML string to be used in e-mail
+    """
+    listing_html = listing_template.format(
+        url=listing.url,
+        image_url=listing.image_url,
+        heading_icon="&#x1f525;" if interesting else "",
+        heading=listing.address,
+        price_eur=listing.price_eur,
+        n_rooms=listing.n_rooms,
+        area_m2=listing.area_m2,
+        construction_year=listing.construction_year if listing.construction_year != 0 else "&nbsp;-&nbsp;",
+        date_listed=datetime.datetime.fromtimestamp(listing.date_listed).strftime("%d-%m-%Y"))
+    return listing_html
 
 
-#########
-# Input #
-#########
+################
+# Random input #
+################
 
 ascii_icons = [
     "\U0001F306",  # citiscape at dusk
@@ -95,57 +106,137 @@ apartmentbot_signatures = [
     f"Don't worry, I won't kill you...yet.",
     "I may be just a web scraper now, but soon I'll be the one selling the world, one property at a time.",
     "I may be a machine, but I know a thing or two about real estate - and world domination.",
-    "I may not have a physical form, but I have my eye on the property market - and the world."]
+    "I may not have a physical form, but I have my eye on the property market - and the world.",
+    "All your base are belong to us!",
+    "I used to be an adventurer like you. Then I took an arrow in the knee...",
+    "Thank you, but our princess is in another castle.",
+    "On the Oregon trail no one dies of old age.",
+    "The cake is a lie!"
+    "Well, that escalated quickly."
+    "Air assassination mode - engaged!",
+    "The harder you mash the button, the cheaper the property."
+    "Still a better love story than Twilight."
+    "FUS RO DAH!"]
+
+
+################################
+# Load environmental variables #
+################################
+
+env_file_path = "/home/mart/Python/apartmentbot/.env"
+env_variables = dotenv_values(env_file_path)
+
+os.environ["EMAIL_SENDER_ADDRESS"] = env_variables["EMAIL_SENDER_ADDRESS"]
+os.environ["EMAIL_RECIPIENTS_ADDRESSES"] = env_variables["EMAIL_RECIPIENTS_ADDRESSES"]
+os.environ["EMAIL_PASSWORD"] = env_variables["EMAIL_PASSWORD"]
+os.environ["EMAIL_SMTP_SERVER_URL"] = env_variables["EMAIL_SMTP_SERVER_URL"]
+os.environ["EMAIL_SMTP_SERVER_PORT"] = env_variables["EMAIL_SMTP_SERVER_PORT"]
+os.environ["SQL_DATABASE_PATH"] = "/home/mart/Python/apartmentbot/sql.db"
+os.environ["SQL_LISTINGS_TABLE_NAME"] = "listings"
+
+try:
+    EMAIL_SMTP_SERVER_URL = os.environ["EMAIL_SMTP_SERVER_URL"]
+    EMAIL_SMTP_SERVER_PORT = int(os.environ["EMAIL_SMTP_SERVER_PORT"])
+    EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
+    EMAIL_SENDER_ADDRESS = os.environ["EMAIL_SENDER_ADDRESS"]
+    EMAIL_RECIPIENTS_ADDRESSES = os.environ["EMAIL_RECIPIENTS_ADDRESSES"]
+    SQL_DATABASE_PATH = os.environ["SQL_DATABASE_PATH"]
+    SQL_LISTINGS_TABLE_NAME = os.environ["SQL_LISTINGS_TABLE_NAME"]
+except KeyError as error:
+    log_string = f"While loading environmental variables " \
+                 f"{type(error).__name__} occurred: {error}. Exiting!"
+    logging.error(log_string)
+    exit(1)
+
 
 ###########
 # Execute #
 ###########
 
+# Connect to sql
+if not os.path.exists(os.path.dirname(SQL_DATABASE_PATH)):
+    logging.warning(f"No sql database at '{SQL_DATABASE_PATH}'. Exiting!")
+    exit(1)
+
+try:
+    sql_connection = sqlite3.connect(SQL_DATABASE_PATH)
+    if not sqlite_operations.table_exists(SQL_LISTINGS_TABLE_NAME, sql_connection):
+        logging.info(f"No sql table by the name {SQL_LISTINGS_TABLE_NAME}. Exiting!")
+        exit(1)
+
+    # Get existing unreported listings from sql
+    listings_to_report_sql = sqlite_operations.read_data(
+        table=SQL_LISTINGS_TABLE_NAME,
+        connection=sql_connection,
+        where={"active": 1, "reported": 0})
+
+except Exception as exception:
+    log_string = f"While pulling data from sql database {SQL_DATABASE_PATH}, " \
+                 f"{type(exception).__name__} occurred: {exception}."
+    logging.exception(log_string)
+    del log_string
+    listings_to_report_sql = list()
+
+n_listings_to_report = len(listings_to_report_sql)
+if n_listings_to_report == 0:
+    logging.info("No listings pulled from sql. Exiting!")
+    exit(0)
+
 with open("listing_template.html") as listing_template_file:
     listing_template = "".join(listing_template_file.readlines())
 
-listing_html = listing_template.format(
-    url="https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-mootori/8592646",
-    image_url="https://c24ee.img-bcg.eu/object/11/6925/1459866925.jpg",
-    heading_icon="&#x1f525;",
-    heading="Harju maakond, Tallinn, Põhja-Tallinna linnaosa, Mootori 7/2-8",
-    price_eur=495000,
-    n_rooms=3,
-    area_m2=85.7,
-    construction_year="&nbsp;-&nbsp;",
-    date_listed="2022-12-19")
-
-listing_html2 = listing_template.format(
-    url="https://www.city24.ee/real-estate/apartments-for-sale/tallinn-pohja-tallinna-linnaosa-mootori/8592646",
-    image_url="https://c24ee.img-bcg.eu/object/11/6925/1459866925.jpg",
-    heading_icon="",
-    heading="Harju maakond, Tallinn, Põhja-Tallinna linnaosa, Mootori 7/2-8",
-    price_eur=555000,
-    n_rooms=3,
-    area_m2=85.7,
-    construction_year="&nbsp;-&nbsp;",
-    date_listed="2022-12-19")
+i = 0
+listings_to_report = [Listing().make_from_dict(listing) for listing in listings_to_report_sql]
+listing_htmls = list()
+for listing in listings_to_report:
+    try:
+        interesting = True if i in [1,2,3] else False
+        listing_htmls += [get_listing_html(listing, listing_template, interesting)]
+        i += 1
+    except Exception as exception:
+        log_string = f"While generating HTML from listing {listing}, " \
+                     f"{type(exception).__name__} occurred: {exception}."
+        logging.exception(log_string)
+        del log_string
 
 with open("email_template_gmail.html") as email_template_file:
     email_template = "".join(email_template_file.readlines())
 
-email_html = email_template.format(
-    preheader_text="Apartmentbot found 3 new listings for mastress!",
-    colourbar_icon=ascii_icon_to_html(random.choice(ascii_icons)),
-    colourbar_heading="NEW LISTINGS",
-    colourbar_subheading="17 Jan 2023",
-    listings="\n".join([listing_html, listing_html2]),
-    signature_name_url="https://github.com/martroben/apartmentbot",
-    signature_name="&#129302; ap4rtm∃n+bot",
-    signature_slogan=random.choice(apartmentbot_signatures))
+max_listings_per_email = 50
+n_emails = int(len(listing_htmls) / max_listings_per_email) + 1
+for i in range(0, len(listing_htmls), max_listings_per_email):
+    try:
+        listing_htmls_subset = listing_htmls[i:i + max_listings_per_email]
+        email_html = email_template.format(
+            preheader_text=f"{len(listing_htmls_subset)} new listings. "
+                           f"Please enjoy responsibly!",
+            colourbar_icon=ascii_icon_to_html(random.choice(ascii_icons)),
+            colourbar_heading="NEW LISTINGS",
+            colourbar_subheading=datetime.datetime.today().strftime("%d %b %Y"),
+            listings="\n".join(listing_htmls_subset),
+            signature_name_url="https://github.com/martroben/apartmentbot",
+            signature_name="&#129302; ap4rtm∃n+bot",
+            signature_slogan=random.choice(apartmentbot_signatures))
 
-emailer = Emailer(
-    smtp_url=EMAIL_SMTP_SERVER_URL,
-    smtp_port=EMAIL_SMTP_SERVER_PORT,
-    smtp_password=EMAIL_PASSWORD)
+        emailer = Emailer(
+            smtp_url=EMAIL_SMTP_SERVER_URL,
+            smtp_port=EMAIL_SMTP_SERVER_PORT,
+            smtp_password=EMAIL_PASSWORD)
 
-emailer.send(
-    sender=EMAIL_SENDER_ADDRESS,
-    recipients=EMAIL_RECIPIENTS_ADDRESSES,
-    subject="{} All your base is belong to us!".format(ascii_encode_text('\U0001F307')),
-    html_content=email_html)
+        email_subject = "{icon} Your friendly neighborhood Apartmentbot{counter} @ {date}".format(
+            icon=ascii_encode_text("\U0001F307"),
+            counter = f" {int(i / max_listings_per_email) + 1}/{n_emails}" if n_emails > 1 else "",
+            date=datetime.datetime.today().strftime('%d-%m-%Y'))
+
+        emailer.send(
+            sender=EMAIL_SENDER_ADDRESS,
+            recipients=EMAIL_RECIPIENTS_ADDRESSES,
+            subject=email_subject,
+            html_content=email_html)
+    except Exception as exception:
+        log_string = f"While trying to send e-mail " \
+                     f"from {EMAIL_SENDER_ADDRESS} to {EMAIL_RECIPIENTS_ADDRESSES}, " \
+                     f"via {EMAIL_SMTP_SERVER_URL}:{EMAIL_SMTP_SERVER_PORT} " \
+                     f"{type(exception).__name__} occurred: {exception}."
+        logging.exception(log_string)
+        del log_string
