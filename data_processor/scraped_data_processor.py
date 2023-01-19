@@ -139,7 +139,7 @@ if __name__ == "__main__":
                 logging.info(f"No sql table by the name {SQL_LISTINGS_TABLE_NAME}. Creating.")
                 sqlite_operations.create_listings_table(SQL_LISTINGS_TABLE_NAME, sql_connection)
 
-            # Get existing listings active from sql
+            # Get existing active listings from sql
             logging.info("Getting existing active listings from sql.")
             sql_active_listings = sqlite_operations.read_data(
                 table=SQL_LISTINGS_TABLE_NAME,
