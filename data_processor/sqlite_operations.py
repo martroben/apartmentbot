@@ -1,8 +1,10 @@
 
-import sqlite3
+# standard
 import logging
 import time
-
+# external
+import sqlite3
+# local
 from data_classes import Listing
 
 
@@ -88,19 +90,37 @@ def insert_listing(listing: Listing, table: str, connection: sqlite3.Connection)
     return
 
 
-def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = None) -> list[dict]:
+def get_where_statement(conditions: (dict, str, None)) -> str:
+    """
+    Turn input to a SQL WHERE statement
+    :param conditions: dict with key: value pairs for columns and their values;
+    str of a completed WHERE statement or None
+    :return: A SQL WHERE statement in str format
+    """
+    if isinstance(conditions, str):
+        return conditions
+    if conditions is None:
+        return ""
+    condition_strings = list()
+    for key, value in conditions.items():
+        # Quote values that are strings
+        condition_strings += [f'{key} = "{value}"'] if isinstance(value, str) else [f"{key} = {value}"]
+    where_condition = " AND ".join(condition_strings)
+    return where_condition
+
+
+def read_data(table: str, connection: sqlite3.Connection, where: (None, str, dict) = None) -> list[dict]:
     """
     Get data from a SQL table.
 
     :param table: SQL table name.
     :param connection: SQL connection.
-    :param where: Optional SQL WHERE filtering clause as string. E.g. "column = value" or "column IN (1,2,3)".
+    :param where: Optional SQL WHERE filtering clause as dict
+    or statement string: e.g. "column = value" or "column IN (1,2,3)".
     :return: A list of column_name:value dicts.
     """
-    if where is None:
-        get_data_command = f"SELECT * FROM {table};"
-    else:
-        get_data_command = f"SELECT * FROM {table} WHERE {where};"
+    where_statement = f" WHERE {get_where_statement(where)}" if where else ""
+    get_data_command = f"SELECT * FROM {table}{where_statement};"
     sql_cursor = connection.cursor()
     data = sql_cursor.execute(get_data_command).fetchall()
     data_column_names = [item[0] for item in sql_cursor.execute(get_data_command).description]
@@ -109,7 +129,6 @@ def read_data(table: str, connection: sqlite3.Connection, where: (None, str) = N
     for row in data:
         data_row = {key: value for key, value in zip(data_column_names, row)}
         data_rows += [data_row]
-
     return data_rows
 
 
@@ -151,6 +170,24 @@ def set_unlisting_date(table: str, connection: sqlite3.Connection,
         where_condition_elements += [f'{key} = "{value}"'] if isinstance(value, str) else [f"{key} = {value}"]
     where_condition = " AND ".join(where_condition_elements)
     update_table_command = f"UPDATE {table} SET date_unlisted = {date} WHERE {where_condition};"
+    sql_cursor = connection.cursor()
+    sql_cursor.execute(update_table_command)
+    return
+
+
+def set_value(table: str, connection: sqlite3.Connection, column: str, value: str, where: dict = None) -> None:
+    """
+    Sets the specified column value in SQL table.
+
+    :param table: Table name in SQL database.
+    :param connection: SLQ connection object.
+    :param column: Column/parameter to change in table.
+    :param value: Value to assign to the column.
+    :param where: Key-value pairs to identify listing that needs to be changed or full SQL WHERE statement string.
+    :return: None
+    """
+    where_statement = f" WHERE {get_where_statement(where)}" if where else ""
+    update_table_command = f"UPDATE {table} SET {column} = {value}{where_statement};"
     sql_cursor = connection.cursor()
     sql_cursor.execute(update_table_command)
     return
