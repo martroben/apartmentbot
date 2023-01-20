@@ -59,7 +59,7 @@ class Listing:
         for key, value in class_variables.items():
             setattr(self, key, value)
 
-    def make_from_dict(self, listing_dict):
+    def make_from_dict(self, listing_dict: dict):
         """Set values of variables from a dict"""
         for key, value in listing_dict.items():
             setattr(self, key, value)
@@ -98,3 +98,12 @@ class Listing:
         listing_hash = hashlib.shake_128(hash_seed.encode()).hexdigest(int(hash_length - 1 / 2))
         listing_id = f"X{listing_hash}".upper()
         self.id = listing_id
+
+    def fits_criteria(*args) -> list[bool]:
+        """
+        Takes statements in the form "n_rooms < 3", "city == 'Põhja-Tallinna linnaosa'" etc.
+        Evaluates each and returns a list of booleans.
+        :param args: Statements about listing variables
+        :return: Booleans for each input statement
+        """
+        return [eval(f"self.{condition}") for condition in args]

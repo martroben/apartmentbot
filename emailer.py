@@ -12,30 +12,14 @@ import sqlite3
 import smtplib
 import ssl
 import sys
+
 # external
 from dotenv import dotenv_values
+
 # local
 sys.path.append("/home/mart/Python/apartmentbot/data_processor")
 import sqlite_operations
-from data_classes import Listing
-
-
-def ascii_encode_text(text):
-    byte_string = text.encode("UTF-8")
-    encoded_text = base64.b64encode(byte_string)
-    return f"=?UTF-8?B?{encoded_text.decode('ascii')}?="
-
-
-def parse_username(email_address):
-    username_match = re.search(r"<(.*)>", email_address)
-    username = username_match.group(1) if username_match else email_address
-    return username
-
-
-def ascii_icon_to_html(ascii_icon):
-    ascii_code = ord(ascii_icon)
-    html_code = f"&#{ascii_code};"
-    return html_code
+import data_classes
 
 
 class Emailer:
@@ -56,7 +40,25 @@ class Emailer:
             server.send_message(self.email, from_addr=sender, to_addrs=recipients)
 
 
-def get_listing_html(listing: Listing, listing_template: str, interesting: bool = False) -> str:
+def ascii_encode_text(text):
+    byte_string = text.encode("UTF-8")
+    encoded_text = base64.b64encode(byte_string)
+    return f"=?UTF-8?B?{encoded_text.decode('ascii')}?="
+
+
+def parse_username(email_address):
+    username_match = re.search(r"<(.*)>", email_address)
+    username = username_match.group(1) if username_match else email_address
+    return username
+
+
+def ascii_icon_to_html(ascii_icon):
+    ascii_code = ord(ascii_icon)
+    html_code = f"&#{ascii_code};"
+    return html_code
+
+
+def get_listing_html(listing: data_classes.Listing, listing_template: str, interesting: bool = False) -> str:
     """
     Turns Listing object to e-mailable HTML string.
 
@@ -78,9 +80,9 @@ def get_listing_html(listing: Listing, listing_template: str, interesting: bool 
     return listing_html
 
 
-################
-# Random input #
-################
+#################
+# Random inputs #
+#################
 
 ascii_icons = [
     "\U0001F306",  # citiscape at dusk
@@ -160,11 +162,18 @@ if not os.path.exists(os.path.dirname(SQL_DATABASE_PATH)):
 
 try:
     sql_connection = sqlite3.connect(SQL_DATABASE_PATH)
-    if not sqlite_operations.table_exists(SQL_LISTINGS_TABLE_NAME, sql_connection):
-        logging.info(f"No sql table by the name {SQL_LISTINGS_TABLE_NAME}. Exiting!")
-        exit(1)
+except sqlite3.Error as error:
+    log_string = f"While establishing connection to sql database {SQL_DATABASE_PATH}, " \
+                 f"{type(error).__name__} occurred: {error}. Exiting!"
+    logging.error(log_string)
+    exit(1)
 
-    # Get existing unreported listings from sql
+if not sqlite_operations.table_exists(SQL_LISTINGS_TABLE_NAME, sql_connection):
+    logging.info(f"No sql table by the name {SQL_LISTINGS_TABLE_NAME}. Exiting!")
+    exit(1)
+
+# Get existing unreported listings from sql
+try:
     listings_to_report_sql = sqlite_operations.read_data(
         table=SQL_LISTINGS_TABLE_NAME,
         connection=sql_connection,
@@ -179,41 +188,112 @@ except Exception as exception:
 
 n_listings_to_report = len(listings_to_report_sql)
 if n_listings_to_report == 0:
-    logging.info("No listings pulled from sql. Exiting!")
+    logging.info("No new unreported listings received from sql. Exiting!")
     exit(0)
+
+listings_to_report = [data_classes.Listing().make_from_dict(listing) for listing in listings_to_report_sql]
 
 with open("listing_template.html") as listing_template_file:
     listing_template = "".join(listing_template_file.readlines())
-
-i = 0
-listings_to_report = [Listing().make_from_dict(listing) for listing in listings_to_report_sql]
-listing_htmls = list()
-for listing in listings_to_report:
-    try:
-        interesting = True if i in [1,2,3] else False
-        listing_htmls += [get_listing_html(listing, listing_template, interesting)]
-        i += 1
-    except Exception as exception:
-        log_string = f"While generating HTML from listing {listing}, " \
-                     f"{type(exception).__name__} occurred: {exception}."
-        logging.exception(log_string)
-        del log_string
-
 with open("email_template_gmail.html") as email_template_file:
     email_template = "".join(email_template_file.readlines())
 
 max_listings_per_email = 50
-n_emails = int(len(listing_htmls) / max_listings_per_email) + 1
-for i in range(0, len(listing_htmls), max_listings_per_email):
+listings_chunked = list()
+for i in range(0, len(listings_to_report), max_listings_per_email):
+    listings_chunked += [listings_to_report[i:i + max_listings_per_email]]
+
+
+
+
+
+
+############### Re-locate to data_classes
+def get_match_length(search_term: str, word: str) -> int:
+    """
+    Use sliding windows (masks) with different sizes on search_term
+    to find the length of maximum matching span with input word.
+    E.g. slaughter & manslaughter give a match length of 8.
+    :param search_term: string 1
+    :param word: string 2
+    :return: Length of the biggest matching span.
+    """
+    for window_span in reversed(range(len(search_term) + 1)):
+        for start in range(len(search_term) + 1 - window_span):
+            if search_term[start : start+window_span] in word:
+                return window_span
+    return 0
+
+
+def get_match_rate(search_term, word):
+    disposable_strings = ["tn", "pst", "tänav", "puiestee", "linn", "linnaosa", "st", "ave", "blvd"]
+
+    search_term_normalized = search_term.strip(". ")
+    word_normalized = word.strip(". ")
+    for string in disposable_strings:
+        search_term_normalized = re.sub(rf"\s{string}$", "", search_term_normalized).strip(". ")
+        word_normalized = re.sub(rf"\s{string}$", "", word_normalized).strip(". ")
+    match_length = get_match_length(search_term_normalized.lower(), word_normalized.lower())
+    match_rate = 0.5 * (match_length / len(search_term_normalized)) + 0.5 * (match_length / len(word_normalized))
+    return match_rate
+
+def address_matches(**kwargs):
+    city = kwargs.get("city", "")
+    street = kwargs.get("street", "")
+    house_number = kwargs.get("house_number", [])
+    house_number = house_number if isinstance(house_number, list) else [house_number]
+    house_number = [str(element) for element in house_number]
+
+    self_city = "Tallinn"   ############## remove
+    self_street = "Liinivahe"
+    self_house_number = "7"
+
+    if city and get_match_rate(city, self_city) < 0.88:
+        return False
+    if get_match_rate(street, self_street) < 0.88:
+        return False
+    if self_house_number not in house_number:
+        return False
+    return True
+
+
+place_of_interest = {"city": "Tallinn", "street": "Liinivahe", "house_number": ["7", 9, "a", 11]}
+address_matches(**place_of_interest)
+
+
+
+
+
+for i, listings in enumerate(listings_chunked):
+
+################## Work start
+n_emails = int(len(listings_to_report) / max_listings_per_email) + 1
+n_listings_reported = 0
+for i in range(0, len(listings_to_report), max_listings_per_email):
+
+    listings_to_report_subset = listings_to_report[i:i + max_listings_per_email]
+
+    j = 0  ########################## temporary
+    listing_htmls = list()
+    for listing in listings_to_report_subset:
+        try:
+            interesting = True if j in [1, 2, 3] else False  ################# temporary
+            listing_htmls += [get_listing_html(listing, listing_template, interesting)]
+            j += 1  ####################### temporary
+        except Exception as exception:
+            log_string = f"While generating HTML from listing {listing}, " \
+                         f"{type(exception).__name__} occurred: {exception}."
+            logging.exception(log_string)
+            del log_string
+
     try:
-        listing_htmls_subset = listing_htmls[i:i + max_listings_per_email]
         email_html = email_template.format(
-            preheader_text=f"{len(listing_htmls_subset)} new listings. "
+            preheader_text=f"{len(listing_htmls)} new listings. "
                            f"Please enjoy responsibly!",
             colourbar_icon=ascii_icon_to_html(random.choice(ascii_icons)),
             colourbar_heading="NEW LISTINGS",
             colourbar_subheading=datetime.datetime.today().strftime("%d %b %Y"),
-            listings="\n".join(listing_htmls_subset),
+            listings="\n".join(listing_htmls),
             signature_name_url="https://github.com/martroben/apartmentbot",
             signature_name="&#129302; ap4rtm∃n+bot",
             signature_slogan=random.choice(apartmentbot_signatures))
@@ -225,7 +305,7 @@ for i in range(0, len(listing_htmls), max_listings_per_email):
 
         email_subject = "{icon} Your friendly neighborhood Apartmentbot{counter} @ {date}".format(
             icon=ascii_encode_text("\U0001F307"),
-            counter = f" {int(i / max_listings_per_email) + 1}/{n_emails}" if n_emails > 1 else "",
+            counter=f"{int(i / max_listings_per_email) + 1}/{n_emails}" if n_emails > 1 else "",
             date=datetime.datetime.today().strftime('%d-%m-%Y'))
 
         emailer.send(
@@ -233,6 +313,16 @@ for i in range(0, len(listing_htmls), max_listings_per_email):
             recipients=EMAIL_RECIPIENTS_ADDRESSES,
             subject=email_subject,
             html_content=email_html)
+
+        n_listings_reported += len(listing_htmls)
+    except OSError as email_error:
+        log_string = f"While trying to send e-mail " \
+                     f"from {EMAIL_SENDER_ADDRESS} to {EMAIL_RECIPIENTS_ADDRESSES}, " \
+                     f"via {EMAIL_SMTP_SERVER_URL}:{EMAIL_SMTP_SERVER_PORT} " \
+                     f"{type(email_error).__name__} occurred: {email_error}. " \
+                     f"Email probably not sent."
+        logging.exception(log_string)
+        del log_string
     except Exception as exception:
         log_string = f"While trying to send e-mail " \
                      f"from {EMAIL_SENDER_ADDRESS} to {EMAIL_RECIPIENTS_ADDRESSES}, " \
@@ -240,3 +330,29 @@ for i in range(0, len(listing_htmls), max_listings_per_email):
                      f"{type(exception).__name__} occurred: {exception}."
         logging.exception(log_string)
         del log_string
+        n_listings_reported += len(globals().get("max_listings_per_email", ""))
+
+
+############## Add logic to find interesting listings
+
+
+# Set listings as reported
+listing_sql_where_statements = list()
+for listing in listings_to_report:
+    listing_dict = dict()
+    for variable in data_classes.get_class_variables(listing):
+        listing_dict[variable] = listing.__getattribute__(variable)
+    listing_sql_where_statements += [sqlite_operations.get_where_statement(listing_dict)]
+
+for where_statement in listing_sql_where_statements:
+    sqlite_operations.set_value(
+        table=SQL_LISTINGS_TABLE_NAME,
+        connection=sql_connection,
+        column="reported",
+        value="1",
+        where=where_statement)
+sql_connection.commit()
+
+email_recipients_string = " and ".join([f"'{email.strip()}'" for email in EMAIL_RECIPIENTS_ADDRESSES.split(",")])
+logging.info(f"E-mailed {n_listings_reported} of {len(listings_to_report)} listings to {email_recipients_string} "
+             f"and marked them as 'reported' in sql.")

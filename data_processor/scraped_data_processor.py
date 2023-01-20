@@ -1,14 +1,18 @@
 
-import sys
+# standard
+from datetime import datetime
+import logging
 import os
 import random
 import re
-import logging
-import sqlite3
 import shutil
-from datetime import datetime
+import sqlite3
+import sys
+
+# external
 from dotenv import dotenv_values
 
+# local
 sys.path.append("/home/mart/Python/apartmentbot/data_processor")
 import sqlite_operations
 import c24_data_operations

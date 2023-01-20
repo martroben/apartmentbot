@@ -175,7 +175,8 @@ def set_unlisting_date(table: str, connection: sqlite3.Connection,
     return
 
 
-def set_value(table: str, connection: sqlite3.Connection, column: str, value: str, where: dict = None) -> None:
+def set_value(table: str, connection: sqlite3.Connection,
+              column: str, value: str, where: (str, dict, None) = None) -> None:
     """
     Sets the specified column value in SQL table.
 
