@@ -93,7 +93,7 @@ def insert_listing(listing: Listing, table: str, connection: sqlite3.Connection)
 def get_where_statement(conditions: (dict, str, None)) -> str:
     """
     Turn input to a SQL WHERE statement
-    :param conditions: dict with key: value pairs for columns and their values;
+    :param conditions: dict with key: value pairs for sql variables and their values;
     str of a completed WHERE statement or None
     :return: A SQL WHERE statement in str format
     """

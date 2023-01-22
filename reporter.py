@@ -5,6 +5,7 @@ import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import itertools
+import json
 import logging
 import os
 import random
@@ -59,19 +60,19 @@ def ascii_icon_to_html(ascii_icon):
     return html_code
 
 
-def get_listing_html(listing: data_classes.Listing, listing_template: str, interesting: bool = False) -> str:
+def get_listing_html(listing: data_classes.Listing, listing_template: str, highlight: bool = False) -> str:
     """
-    Turns Listing object to e-mailable HTML string.
+    Turns Listing object to e-mailable html string.
 
     :param listing: Listing object
     :param listing_template: Listing e-mail template
-    :param interesting: Should the listing be highlighted in the e-mail?
-    :return: HTML string to be used in e-mail
+    :param highlight: Should the listing be highlighted in the e-mail?
+    :return: html string to be used in e-mail
     """
     listing_html = listing_template.format(
         url=listing.url,
         image_url=listing.image_url,
-        heading_icon="&#x1f525;" if interesting else "",
+        heading_icon="&#x1f525;" if highlight else "",
         heading=listing.address,
         price_eur=listing.price_eur,
         n_rooms=listing.n_rooms,
@@ -89,7 +90,7 @@ ascii_icons = [
     "\U0001F306",  # citiscape at dusk
     "\U0001F388",  # balloon
     "\U0001F3E0",  # house building
-    "\U0001F449",  # right pointing finget
+    "\U0001F449",  # right pointing finger
     "\U0001F46A",  # family
     "\U0001F4E2",  # loudspeaker
     "\U0001F525",  # fire
@@ -156,7 +157,7 @@ os.environ["EMAIL_SMTP_SERVER_PORT"] = env_variables["EMAIL_SMTP_SERVER_PORT"]
 os.environ["SQL_DATABASE_PATH"] = "/home/mart/Python/apartmentbot/sql.db"
 os.environ["SQL_LISTINGS_TABLE_NAME"] = "listings"
 os.environ["REPORT_FILTER_CONDITIONS_PATH"] = "/home/mart/Python/apartmentbot/filter_conditions"
-os.environ["REPORT_INTEREST_CONDITIONS_PATH"] = "/home/mart/Python/apartmentbot/interest_conditions"
+os.environ["REPORT_HIGHLIGHT_CONDITIONS_PATH"] = "/home/mart/Python/apartmentbot/highlight_conditions"
 
 try:
     EMAIL_SMTP_SERVER_URL = os.environ["EMAIL_SMTP_SERVER_URL"]
@@ -167,7 +168,7 @@ try:
     SQL_DATABASE_PATH = os.environ["SQL_DATABASE_PATH"]
     SQL_LISTINGS_TABLE_NAME = os.environ["SQL_LISTINGS_TABLE_NAME"]
     REPORT_FILTER_CONDITIONS_PATH = os.environ["REPORT_FILTER_CONDITIONS_PATH"]
-    REPORT_INTEREST_CONDITIONS_PATH = os.environ["REPORT_INTEREST_CONDITIONS_PATH"]
+    REPORT_HIGHLIGHT_CONDITIONS_PATH = os.environ["REPORT_HIGHLIGHT_CONDITIONS_PATH"]
 except KeyError as error:
     log_string = f"While loading environmental variables " \
                  f"{type(error).__name__} occurred: {error}. Exiting!"
@@ -220,6 +221,7 @@ if len(listings_sql) == 0:
 
 unreported_listings = [data_classes.Listing().make_from_dict(listing) for listing in listings_sql]
 
+# Filter listings to report
 if os.path.exists(os.path.dirname(REPORT_FILTER_CONDITIONS_PATH)):
     with open(REPORT_FILTER_CONDITIONS_PATH) as filter_conditions_file:
         lines = [line.strip(",\n").split(",") for line in filter_conditions_file.readlines()]
@@ -227,47 +229,54 @@ if os.path.exists(os.path.dirname(REPORT_FILTER_CONDITIONS_PATH)):
 
     listings_to_report = [listing for listing in unreported_listings
                           if all(listing.fits_conditions(*filter_conditions))]
-
     if filter_conditions:
-        info_string = f"Used the following filtering conditions: {', '.join(filter_conditions)}. " \
-                      f"{len(listings_to_report)} out of {len(unreported_listings)} unreported listings " \
+        info_string = f"Using the following filtering conditions: {', '.join(filter_conditions)}. " \
+                      f"Out of {len(listings_to_report)} unreported listings, {len(unreported_listings)} " \
                       f"matched the filtering condition."
         logging.info(info_string)
         del info_string
 else:
     listings_to_report = unreported_listings
 
+# Load highlight location conditions from file
+if os.path.exists(os.path.dirname(REPORT_HIGHLIGHT_CONDITIONS_PATH)):
+    with open(REPORT_HIGHLIGHT_CONDITIONS_PATH) as highlight_conditions_file:
+        highlight_conditions = [json.loads(line.strip(",\n")) for line in highlight_conditions_file.readlines()]
+else:
+    highlight_conditions = list()
 
+# Load e-mail html templates
 with open("listing_template.html") as listing_template_file:
     listing_template = "".join(listing_template_file.readlines())
 with open("email_template_gmail.html") as email_template_file:
     email_template = "".join(email_template_file.readlines())
 
+# Generate a list of tuples: (listing original index, listing html)
+listing_htmls = list()
+for i, listing in enumerate(listings_to_report):
+    try:
+        highlight = any([listing.matches_address(**location) for location in highlight_conditions])
+        listing_htmls += [(i, get_listing_html(listing, listing_template, highlight))]
+    except Exception as exception:
+        log_string = f"While generating listing html of {listing}, " \
+                     f"{type(exception).__name__} occurred: {exception}."
+        logging.exception(log_string)
+        del log_string
+
+# Divide listings to smaller chunks (emails) so that e-mail content wouldn't get truncated
 max_listings_per_email = 50
-listings_chunked = list()
-for i in range(0, len(listings_to_report), max_listings_per_email):
-    listings_chunked += [listings_to_report[i:i + max_listings_per_email]]
+listing_emails = list()
+for i in range(0, len(listing_htmls), max_listings_per_email):
+    listing_emails += [listing_htmls[i:i+max_listings_per_email]]
 
-########################## Import from file
-locations_of_interest = [
-    {"city": "Põhja-Tallinn", "street": "Liinivahe", "house_number": ["7", "9", "11"]}]
-
-n_emails = len(listings_chunked)
-n_listings_reported = 0
-for i, listings in enumerate(listings_chunked):
-    listing_htmls = list()
-    for listing in listings:
-        try:
-            is_interesting = any([listing.matches_address(**location) for location in locations_of_interest])
-            listing_htmls += [get_listing_html(listing, listing_template, is_interesting)]
-        except Exception as exception:
-            log_string = f"While generating HTML from listing {listing}, " \
-                         f"{type(exception).__name__} occurred: {exception}."
-            logging.exception(log_string)
-            del log_string
+# Generate e-mail htmls
+email_htmls = list()
+for email in listing_emails:
+    listing_indices = [listing[0] for listing in email]
+    listing_htmls = [listing[1] for listing in email]
     try:
         email_html = email_template.format(
-            preheader_text=f"{len(listing_htmls)} new listings. "
+            preheader_text=f"{len(email)} new listings. "
                            f"Please enjoy responsibly!",
             email_theme_colour1="#1f7a8c",
             email_theme_colour2="#283d3b",
@@ -278,70 +287,72 @@ for i, listings in enumerate(listings_chunked):
             signature_name_url="https://github.com/martroben/apartmentbot",
             signature_name="&#129302; ap4rtm∃n+bot",
             signature_slogan=random.choice(apartmentbot_signatures))
+        email_htmls += [(listing_indices, email_html)]
+    except Exception as exception:
+        log_string = f"While generating e-mail html for listings " \
+                     f"with indices from {listing_indices[0]} to {listing_indices[-1]} " \
+                     f"{type(exception).__name__} occurred: {exception}."
+        logging.exception(log_string)
+        del log_string
 
+# Send e-mails
+successfully_reported_indices = []
+for i, email in enumerate(email_htmls):
+    listing_indices = email[0]
+    email_html = email[1]
+    try:
         emailer = Emailer(
             smtp_url=EMAIL_SMTP_SERVER_URL,
             smtp_port=EMAIL_SMTP_SERVER_PORT,
             smtp_password=EMAIL_PASSWORD)
-
         email_subject = "{icon} Your friendly neighborhood Apartmentbot{counter} @ {date}".format(
             icon=ascii_encode_text("\U0001F307"),
-            counter=f" {i + 1}/{n_emails}" if n_emails > 1 else "",
+            counter=f" {i + 1}/{len(email_htmls)}" if len(email_htmls) > 1 else "",
             date=datetime.datetime.today().strftime('%d-%m-%Y'))
-
         emailer.send(
             sender=EMAIL_SENDER_ADDRESS,
             recipients=EMAIL_RECIPIENTS_ADDRESSES,
             subject=email_subject,
             html_content=email_html)
-
-        n_listings_reported += len(listing_htmls)
-
-    except OSError as email_error:
-        log_string = f"While trying to send e-mail " \
-                     f"from {EMAIL_SENDER_ADDRESS} to {EMAIL_RECIPIENTS_ADDRESSES}, " \
-                     f"via {EMAIL_SMTP_SERVER_URL}:{EMAIL_SMTP_SERVER_PORT} " \
-                     f"{type(email_error).__name__} occurred: {email_error}. " \
-                     f"Email was probably not sent."
-        logging.exception(log_string)
-        del log_string
-
+        successfully_reported_indices += listing_indices
     except Exception as exception:
         log_string = f"While trying to send e-mail " \
                      f"from {EMAIL_SENDER_ADDRESS} to {EMAIL_RECIPIENTS_ADDRESSES}, " \
                      f"via {EMAIL_SMTP_SERVER_URL}:{EMAIL_SMTP_SERVER_PORT} " \
+                     f"with listings with indices from {listing_indices[0]} to {listing_indices[-1]} " \
                      f"{type(exception).__name__} occurred: {exception}."
         logging.exception(log_string)
         del log_string
-        n_listings_reported += len(listing_htmls)
 
-    # Set listings as reported
-    listing_sql_where_statements = list()
-    for listing in listings:
-        listing_dict = dict()
+# Set reported listings as 'reported' in sql
+reported_listings = [listings_to_report[i] for i in successfully_reported_indices]
+for listing in reported_listings:
+    listing_attributes = dict()
+    try:
         for variable in data_classes.get_class_variables(listing):
-            listing_dict[variable] = listing.__getattribute__(variable)
-        listing_sql_where_statements += [sqlite_operations.get_where_statement(listing_dict)]
+            listing_attributes[variable] = listing.__getattribute__(variable)
+        where_statement = sqlite_operations.get_where_statement(listing_attributes)
+        sqlite_operations.set_value(
+            table=SQL_LISTINGS_TABLE_NAME,
+            connection=sql_connection,
+            column="reported",
+            value="1",
+            where=where_statement)
+    except Exception as exception:
+        log_string = f"While setting listing {listing} as 'reported' in sql database, " \
+                     f"{type(exception).__name__} occurred: {exception}. " \
+                     f"Listing where statement used: {globals().get('where_statement', '')}."
+        logging.error(log_string)
 
-    for where_statement in listing_sql_where_statements:
-        try:
-            sqlite_operations.set_value(
-                table=SQL_LISTINGS_TABLE_NAME,
-                connection=sql_connection,
-                column="reported",
-                value="1",
-                where=where_statement)
-        except sqlite3.Error as error:
-            log_string = f"While setting listing as 'reported' in sql database, " \
-                         f"{type(error).__name__} occurred: {error}." \
-                         f"Listing parameters: {where_statement} "
-            logging.error(log_string)
+sql_connection.commit()
 
-    sql_connection.commit()
-
-
+# Log conclusion
 email_recipients = [f"'{email.strip()}'" for email in EMAIL_RECIPIENTS_ADDRESSES.split(",")]
 email_recipients_string = " and ".join(email_recipients)
-logging.info(f"E-mailed {n_listings_reported} of {len(listings_to_report)} listings "
-             f"to {email_recipients_string}.")
-################## Re-write longer conclusion + that script finished successfully
+n_unreported_listings = len(unreported_listings)
+n_filtered_listings = len(listings_to_report)
+n_reported_listings = len(reported_listings)
+logging.info(f"Reporter finished successfully! "
+             f"Found {n_unreported_listings} unreported listings in sql. "
+             f"{n_filtered_listings} of these were filtered to be reported. "
+             f"{n_reported_listings} of the filtered listings were reported to {email_recipients_string}.")
