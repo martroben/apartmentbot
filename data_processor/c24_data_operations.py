@@ -77,7 +77,7 @@ def get_listing(data: dict) -> Listing:
     parish = data["address"]["parish"]["name"]
     county = data["address"]["county"]["name"]
     street_house_apartment = combine_street_address(listing.street, listing.house_number, listing.apartment_number)
-    listing.address = ", ".join([element for element in [county, parish, listing.city, street_house_apartment]
+    listing.address = ", ".join([element for element in [street_house_apartment, listing.city, parish, county]
                                  if element is not None])
 
     # True url example from inspection:
@@ -118,7 +118,7 @@ def get_listing(data: dict) -> Listing:
     listing.n_rooms = int(data["room_count"])
     listing.area_m2 = float(data["property_size"])
     listing.price_eur = float(data["price"])
-    listing.construction_year = int(data["attributes"].get("construction_year", 0))
+    listing.construction_year = int(data["attributes"].get("CONSTRUCTION_YEAR", 0))
     # Using epoch time
     listing.date_listed = timegm(time.strptime(data["date_published"], "%Y-%m-%dT%H:%M:%S%z"))
     listing.date_scraped = round(time.time(), 0)
