@@ -202,10 +202,10 @@ class Listing:
         city_search_term = kwargs.get("city", "")
         street_search_term = kwargs.get("street", "")
         house_number_search_terms = kwargs.get("house_number", [])
-        # Make sure house number search terms are a list of str elements
+        # Make sure house number search terms are a list of str elements (even if single string)
         house_number_search_terms = house_number_search_terms if isinstance(house_number_search_terms, list) \
             else [house_number_search_terms]
-        house_number_search_terms = [str(element) for element in house_number_search_terms]
+        house_number_search_terms = [str(element).lower() for element in house_number_search_terms]
 
         city_search_term = normalize_address_word(city_search_term)
         street_search_term = normalize_address_word(street_search_term)
@@ -216,6 +216,6 @@ class Listing:
             return False
         if get_similarity_score(street_search_term, street) < similarity_threshold:
             return False
-        if self.house_number not in house_number_search_terms:
+        if house_number_search_terms and self.house_number.lower() not in house_number_search_terms:
             return False
         return True
