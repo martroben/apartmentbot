@@ -13,13 +13,9 @@ import re
 import sqlite3
 import smtplib
 import ssl
-import sys
-
-# external
-from dotenv import dotenv_values
+# import sys
 
 # local
-sys.path.append("/home/mart/Python/apartmentbot/data_processor")
 import sqlite_operations
 import data_classes
 
@@ -144,14 +140,12 @@ apartmentbot_signatures = [
     "FUS RO DAH!"]
 
 
-########
-# Main #
-########
+###########
+# Execute #
+###########
 
-def main():
-
+if __name__ == "__main__":
     # Set logging
-    os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
     LOG_DIR_PATH = os.environ["LOG_DIR_PATH"]
     if not os.path.exists(LOG_DIR_PATH):
         os.makedirs(LOG_DIR_PATH)
@@ -166,21 +160,6 @@ def main():
     logging.info(f"\n\n\n{'-*-' * 10} REPORTER STARTED {'-*-' * 10}\n")
 
     # Load environmental variables
-    env_file_path = "/home/mart/Python/apartmentbot/.env"
-    env_variables = dotenv_values(env_file_path)
-
-    os.environ["EMAIL_SENDER_ADDRESS"] = env_variables["EMAIL_SENDER_ADDRESS"]
-    os.environ["EMAIL_RECIPIENTS_ADDRESSES"] = env_variables["EMAIL_RECIPIENTS_ADDRESSES"]
-    os.environ["EMAIL_PASSWORD"] = env_variables["EMAIL_PASSWORD"]
-    os.environ["EMAIL_SMTP_SERVER_URL"] = env_variables["EMAIL_SMTP_SERVER_URL"]
-    os.environ["EMAIL_SMTP_SERVER_PORT"] = env_variables["EMAIL_SMTP_SERVER_PORT"]
-    os.environ["SQL_DATABASE_PATH"] = "/home/mart/Python/apartmentbot/sql.db"
-    os.environ["SQL_LISTINGS_TABLE_NAME"] = "listings"
-    os.environ["REPORT_FILTER_CONDITIONS_PATH"] = "/home/mart/Python/apartmentbot/reporter/filter_conditions"
-    os.environ["REPORT_HIGHLIGHT_CONDITIONS_PATH"] = "/home/mart/Python/apartmentbot/reporter/highlight_conditions"
-    os.environ["REPORT_LISTING_HTML_TEMPLATE_PATH"] = "/home/mart/Python/apartmentbot/reporter/listing_template.html"
-    os.environ["REPORT_EMAIL_HTML_TEMPLATE_PATH"] = "/home/mart/Python/apartmentbot/reporter/email_template_gmail.html"
-
     try:
         EMAIL_SMTP_SERVER_URL = os.environ["EMAIL_SMTP_SERVER_URL"]
         EMAIL_SMTP_SERVER_PORT = int(os.environ["EMAIL_SMTP_SERVER_PORT"])
@@ -377,12 +356,3 @@ def main():
                  f"Found {n_unreported_listings} unreported listings in sql. "
                  f"{n_filtered_listings} of these were filtered to be reported. "
                  f"{n_reported_listings} of the filtered listings were reported to {email_recipients_string}.")
-    return
-
-
-###########
-# Execute #
-###########
-
-if __name__ == "__main__":
-    main()

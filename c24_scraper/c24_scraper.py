@@ -1,23 +1,26 @@
 
-import os
-import re
-import random
-import logging
-import undetected_chromedriver as uc
+# standard
 from collections.abc import Callable
-from requests import Request
-from time import sleep
 from datetime import datetime
 from functools import partial, wraps
+import logging
+import os
+import random
+import re
+from requests import Request
+from time import sleep
 from urllib.error import ContentTooShortError
 
+# external
+import undetected_chromedriver as uc
+
+# local
 import tor_operations
 
 
 #############
 # Functions #
 #############
-
 
 def log_exceptions(context: str = ""):
     """

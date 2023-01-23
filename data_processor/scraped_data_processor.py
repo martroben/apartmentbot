@@ -7,22 +7,17 @@ import random
 import re
 import shutil
 import sqlite3
-import sys
-
-# external
-from dotenv import dotenv_values
+# import sys
 
 # local
-sys.path.append("/home/mart/Python/apartmentbot/data_processor")
-import sqlite_operations
 import c24_data_operations
 from data_classes import Listing
+import sqlite_operations
 
 
 #############
 # Functions #
 #############
-
 
 def validate_scraped_data(listings: (set[Listing], list[Listing])) -> bool:
     """
@@ -59,16 +54,6 @@ def archive_scraped_data_file(file_path: str, archive_dir_path: str, not_used: b
 ###########
 # Execute #
 ###########
-
-env_file_path = ".env"
-env_variables = dotenv_values(env_file_path)
-
-os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
-os.environ["C24_INDICATOR"] = env_variables["C24_INDICATOR"]
-os.environ["SQL_DATABASE_PATH"] = "/home/mart/Python/apartmentbot/sql.db"
-os.environ["SQL_LISTINGS_TABLE_NAME"] = env_variables["SQL_LISTINGS_TABLE_NAME"]
-os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
-os.environ["SCRAPED_PAGES_PROCESSED_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/processed"
 
 if __name__ == "__main__":
     # Set logging
