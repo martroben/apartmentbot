@@ -1,4 +1,5 @@
 
+# standard
 import os
 import re
 import random
@@ -10,7 +11,13 @@ from time import sleep
 from datetime import datetime
 from functools import partial, wraps
 from urllib.error import ContentTooShortError
+import sys
 
+# external
+from dotenv import dotenv_values
+
+# local
+sys.path.insert(0, '/home/mart/Python/apartmentbot/c24_scraper')
 import tor_operations
 
 
@@ -187,6 +194,7 @@ def get_chrome_version() -> str:
 if __name__ == "__main__":
 
     # Set logging
+    os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
     LOG_DIR_PATH = os.environ["LOG_DIR_PATH"]
     if not os.path.exists(LOG_DIR_PATH):
         os.makedirs(LOG_DIR_PATH)
@@ -200,6 +208,20 @@ if __name__ == "__main__":
     logging.info(f"\n\n\n{'-*-'*10} C24 SCRAPER STARTED {'-*-'*10}\n")
 
     # Load environmental variables
+    env_file_path = "/home/mart/Python/apartmentbot/.env"
+    env_variables = dotenv_values(env_file_path)
+
+    os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
+    os.environ["TOR_HOST"] = env_variables["TOR_HOST"]
+    os.environ["SOCKS_PORT"] = env_variables["SOCKS_PORT"]
+    os.environ["C24_BASE_URL"] = env_variables["C24_BASE_URL"]
+    os.environ["C24_AREAS"] = env_variables["C24_AREAS"]
+    os.environ["C24_N_ROOMS"] = "3,4,5"
+    os.environ["C24_INDICATOR"] = env_variables["C24_INDICATOR"]
+    os.environ["IP_REPORTER_API_URL"] = env_variables["IP_REPORTER_API_URL"]
+    os.environ["TOR_CONTROL_PORT"] = env_variables["TOR_CONTROL_PORT"]
+    os.environ["TOR_CONTROL_PORT_PASSWORD"] = env_variables["TOR_CONTROL_PORT_PASSWORD"]
+
     try:
         # Mandatory
         SCRAPED_PAGES_NEW_PATH = os.environ["SCRAPED_PAGES_NEW_PATH"]
