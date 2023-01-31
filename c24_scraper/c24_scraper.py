@@ -205,6 +205,19 @@ def get_chrome_version() -> str:
     return version_main
 
 
+def detect_blocking(page: str) -> bool:
+    """
+    Detect if scraper has been blocked by anti-scraping by keyphrases in page source ("captcha", "trouble").
+    :param page: Scraped page source
+    :return: True if there is a certain number of blocking indicators
+    """
+    blocking_indicators_pattern = re.compile(r"captcha|trouble")
+    blocking_indicators_threshold = 5
+
+    n_blocking_indicators = len(blocking_indicators_pattern.findall(page))
+    return n_blocking_indicators >= blocking_indicators_threshold
+
+
 ###########
 # Execute #
 ###########
