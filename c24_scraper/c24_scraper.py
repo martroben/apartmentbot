@@ -21,6 +21,22 @@ sys.path.insert(0, '/home/mart/Python/apartmentbot/c24_scraper')
 import tor_operations
 
 
+###############
+# Set logging #
+###############
+
+os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
+LOG_DIR_PATH = os.environ["LOG_DIR_PATH"]
+if not os.path.exists(LOG_DIR_PATH):
+    os.makedirs(LOG_DIR_PATH)
+
+logging.basicConfig(
+    filename=f"{LOG_DIR_PATH}/{datetime.today().strftime('%Y_%m')}.log",
+    format="{asctime}|{funcName}|{levelname}:{message}",
+    style="{",
+    level=logging.INFO)
+
+
 #############
 # Functions #
 #############
@@ -193,18 +209,6 @@ def get_chrome_version() -> str:
 
 if __name__ == "__main__":
 
-    # Set logging
-    os.environ["LOG_DIR_PATH"] = "/home/mart/Python/apartmentbot/log"
-    LOG_DIR_PATH = os.environ["LOG_DIR_PATH"]
-    if not os.path.exists(LOG_DIR_PATH):
-        os.makedirs(LOG_DIR_PATH)
-
-    logging.basicConfig(
-        filename=f"{LOG_DIR_PATH}/{datetime.today().strftime('%Y_%m')}.log",
-        format="{asctime}|{funcName}|{levelname}:{message}",
-        style="{",
-        level=logging.INFO)
-
     logging.info(f"\n\n\n{'-*-'*10} C24 SCRAPER STARTED {'-*-'*10}\n")
 
     # Load environmental variables
@@ -212,15 +216,15 @@ if __name__ == "__main__":
     env_variables = dotenv_values(env_file_path)
 
     os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
-    os.environ["TOR_HOST"] = env_variables["TOR_HOST"]
+    os.environ["TOR_HOST"] = "127.0.0.1"
     os.environ["SOCKS_PORT"] = env_variables["SOCKS_PORT"]
     os.environ["C24_BASE_URL"] = env_variables["C24_BASE_URL"]
     os.environ["C24_AREAS"] = env_variables["C24_AREAS"]
     os.environ["C24_N_ROOMS"] = "3,4,5"
     os.environ["C24_INDICATOR"] = env_variables["C24_INDICATOR"]
     os.environ["IP_REPORTER_API_URL"] = env_variables["IP_REPORTER_API_URL"]
-    os.environ["TOR_CONTROL_PORT"] = env_variables["TOR_CONTROL_PORT"]
-    os.environ["TOR_CONTROL_PORT_PASSWORD"] = env_variables["TOR_CONTROL_PORT_PASSWORD"]
+    os.environ["TOR_CONTROL_PORT"] = None
+    os.environ["TOR_CONTROL_PORT_PASSWORD"] = ""
 
     try:
         # Mandatory
@@ -242,25 +246,25 @@ if __name__ == "__main__":
         exit(1)
 
     # Randomize scrape times
-    run_probability = 0.3
-    max_delay_time_hours = 4
-
-    if random.uniform(0, 1) > run_probability:
-        tor_close_response = tor_operations.send_control_port_command(
-            command="SIGNAL TERM",
-            tor_host=TOR_HOST,
-            tor_control_port=TOR_CONTROL_PORT,
-            tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
-        logging.info(f"Tor service shut down with response {tor_close_response}")
-        logging.info("c24 scraper exited with no action (randomization)")
-        exit()
-
-    delay_time = random.uniform(0, max_delay_time_hours*3600)
-    logging.info(f"c24 scraper sleeping for {round(delay_time/60, 2)} minutes before action (randomization)")
-    for i in range(5):
-        if i > 0:
-            logging.info(f"{20*i}% of delay time completed.")
-        sleep(delay_time/5)
+    # run_probability = 0.3
+    # max_delay_time_hours = 4
+    #
+    # if random.uniform(0, 1) > run_probability:
+    #     tor_close_response = tor_operations.send_control_port_command(
+    #         command="SIGNAL TERM",
+    #         tor_host=TOR_HOST,
+    #         tor_control_port=TOR_CONTROL_PORT,
+    #         tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
+    #     logging.info(f"Tor service shut down with response {tor_close_response}")
+    #     logging.info("c24 scraper exited with no action (randomization)")
+    #     exit()
+    #
+    # delay_time = random.uniform(0, max_delay_time_hours*3600)
+    # logging.info(f"c24 scraper sleeping for {round(delay_time/60, 2)} minutes before action (randomization)")
+    # for i in range(5):
+    #     if i > 0:
+    #         logging.info(f"{20*i}% of delay time completed.")
+    #     sleep(delay_time/5)
 
     # Specify tor connection
     # Socket format: https://devpress.csdn.net/python/62fe30f8c6770329308047f0.html
@@ -269,7 +273,7 @@ if __name__ == "__main__":
     # Check if tor is up
     logging.info("Checking if tor service is up.")
     # Apply retry decorator
-    tor_operations.check_availability = retry_function(tor_operations.check_availability, interval_sec=8)
+    tor_operations.check_availability = retry_function(tor_operations.check_availability, interval_sec=3)
     tor_service_status = tor_operations.check_availability(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
     if tor_service_status:
         logging.info("Tor service is up.")
