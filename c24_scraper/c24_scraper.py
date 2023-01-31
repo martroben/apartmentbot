@@ -307,6 +307,8 @@ if __name__ == "__main__":
 
     # Export results
     if c24_page:
+        if detect_blocking(c24_page):
+            logging.error("Detected possible blocking by anti-scrape defense.")
         logging.info("Saving scraped data on disk.")
         if not os.path.exists(SCRAPED_PAGES_NEW_PATH):
             os.makedirs(SCRAPED_PAGES_NEW_PATH)
