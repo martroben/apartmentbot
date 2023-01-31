@@ -230,7 +230,7 @@ if __name__ == "__main__":
                               if all(listing.fits_conditions(*filter_conditions))]
         if filter_conditions:
             info_string = f"Using the following filtering conditions: {', '.join(filter_conditions)}. " \
-                          f"Out of {len(listings_to_report)} unreported listings, {len(unreported_listings)} " \
+                          f"Out of {len(unreported_listings)} unreported listings, {len(listings_to_report)} " \
                           f"matched the filtering condition."
             logging.info(info_string)
             del info_string
