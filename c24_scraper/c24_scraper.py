@@ -209,146 +209,143 @@ def get_chrome_version() -> str:
 # Execute #
 ###########
 
-if __name__ == "__main__":
+logging.info(f"\n\n\n{'-*-'*10} C24 SCRAPER STARTED {'-*-'*10}\n")
 
-    logging.info(f"\n\n\n{'-*-'*10} C24 SCRAPER STARTED {'-*-'*10}\n")
+# Load environmental variables
+env_file_path = "/home/mart/Python/apartmentbot/.env"
+env_variables = dotenv_values(env_file_path)
 
-    # Load environmental variables
-    env_file_path = "/home/mart/Python/apartmentbot/.env"
-    env_variables = dotenv_values(env_file_path)
+os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
+os.environ["TOR_HOST"] = "127.0.0.1"
+os.environ["SOCKS_PORT"] = env_variables["SOCKS_PORT"]
+os.environ["C24_BASE_URL"] = env_variables["C24_BASE_URL"]
+os.environ["C24_AREAS"] = env_variables["C24_AREAS"]
+os.environ["C24_N_ROOMS"] = "3,4,5"
+os.environ["C24_INDICATOR"] = env_variables["C24_INDICATOR"]
+os.environ["IP_REPORTER_API_URL"] = env_variables["IP_REPORTER_API_URL"]
+os.environ["TOR_CONTROL_PORT_PASSWORD"] = ""
 
-    os.environ["SCRAPED_PAGES_NEW_PATH"] = "/home/mart/Python/apartmentbot/log/scraped_pages/new"
-    os.environ["TOR_HOST"] = "127.0.0.1"
-    os.environ["SOCKS_PORT"] = env_variables["SOCKS_PORT"]
-    os.environ["C24_BASE_URL"] = env_variables["C24_BASE_URL"]
-    os.environ["C24_AREAS"] = env_variables["C24_AREAS"]
-    os.environ["C24_N_ROOMS"] = "3,4,5"
-    os.environ["C24_INDICATOR"] = env_variables["C24_INDICATOR"]
-    os.environ["IP_REPORTER_API_URL"] = env_variables["IP_REPORTER_API_URL"]
-    os.environ["TOR_CONTROL_PORT"] = None
-    os.environ["TOR_CONTROL_PORT_PASSWORD"] = ""
+try:
+    # Mandatory
+    SCRAPED_PAGES_NEW_PATH = os.environ["SCRAPED_PAGES_NEW_PATH"]
+    TOR_HOST = os.environ["TOR_HOST"]
+    SOCKS_PORT = os.environ["SOCKS_PORT"]
+    C24_BASE_URL = os.environ["C24_BASE_URL"]
+    C24_AREAS = os.environ["C24_AREAS"]
+    C24_N_ROOMS = os.environ["C24_N_ROOMS"]
+    C24_INDICATOR = os.environ["C24_INDICATOR"]
+    # Optional
+    IP_REPORTER_API_URL = os.environ.get("IP_REPORTER_API_URL")
+    TOR_CONTROL_PORT = os.environ.get("TOR_CONTROL_PORT")
+    TOR_CONTROL_PORT_PASSWORD = os.environ.get("TOR_CONTROL_PORT_PASSWORD")
+except KeyError as error:
+    log_string = f"While loading environmental variables " \
+                 f"{type(error).__name__} occurred: {error}. Exiting!"
+    logging.error(log_string)
+    exit(1)
 
-    try:
-        # Mandatory
-        SCRAPED_PAGES_NEW_PATH = os.environ["SCRAPED_PAGES_NEW_PATH"]
-        TOR_HOST = os.environ["TOR_HOST"]
-        SOCKS_PORT = os.environ["SOCKS_PORT"]
-        C24_BASE_URL = os.environ["C24_BASE_URL"]
-        C24_AREAS = os.environ["C24_AREAS"]
-        C24_N_ROOMS = os.environ["C24_N_ROOMS"]
-        C24_INDICATOR = os.environ["C24_INDICATOR"]
-        # Optional
-        IP_REPORTER_API_URL = os.environ.get("IP_REPORTER_API_URL")
-        TOR_CONTROL_PORT = os.environ.get("TOR_CONTROL_PORT")
-        TOR_CONTROL_PORT_PASSWORD = os.environ.get("TOR_CONTROL_PORT_PASSWORD")
-    except KeyError as error:
-        log_string = f"While loading environmental variables " \
-                     f"{type(error).__name__} occurred: {error}. Exiting!"
-        logging.error(log_string)
-        exit(1)
+# Randomize scrape times
+# run_probability = 0.3
+# max_delay_time_hours = 4
+#
+# if random.uniform(0, 1) > run_probability:
+#     tor_close_response = tor_operations.send_control_port_command(
+#         command="SIGNAL TERM",
+#         tor_host=TOR_HOST,
+#         tor_control_port=TOR_CONTROL_PORT,
+#         tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
+#     logging.info(f"Tor service shut down with response {tor_close_response}")
+#     logging.info("c24 scraper exited with no action (randomization)")
+#     exit()
+#
+# delay_time = random.uniform(0, max_delay_time_hours*3600)
+# logging.info(f"c24 scraper sleeping for {round(delay_time/60, 2)} minutes before action (randomization)")
+# for i in range(5):
+#     if i > 0:
+#         logging.info(f"{20*i}% of delay time completed.")
+#     sleep(delay_time/5)
 
-    # Randomize scrape times
-    # run_probability = 0.3
-    # max_delay_time_hours = 4
-    #
-    # if random.uniform(0, 1) > run_probability:
-    #     tor_close_response = tor_operations.send_control_port_command(
-    #         command="SIGNAL TERM",
-    #         tor_host=TOR_HOST,
-    #         tor_control_port=TOR_CONTROL_PORT,
-    #         tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
-    #     logging.info(f"Tor service shut down with response {tor_close_response}")
-    #     logging.info("c24 scraper exited with no action (randomization)")
-    #     exit()
-    #
-    # delay_time = random.uniform(0, max_delay_time_hours*3600)
-    # logging.info(f"c24 scraper sleeping for {round(delay_time/60, 2)} minutes before action (randomization)")
-    # for i in range(5):
-    #     if i > 0:
-    #         logging.info(f"{20*i}% of delay time completed.")
-    #     sleep(delay_time/5)
+# Specify tor connection
+# Socket format: https://devpress.csdn.net/python/62fe30f8c6770329308047f0.html
+socks_socket = f"socks5://{TOR_HOST}:{SOCKS_PORT}"
 
-    # Specify tor connection
-    # Socket format: https://devpress.csdn.net/python/62fe30f8c6770329308047f0.html
-    socks_socket = f"socks5://{TOR_HOST}:{SOCKS_PORT}"
+# Check if tor is up
+logging.info("Checking if tor service is up.")
+# Apply retry decorator
+tor_operations.check_availability = retry_function(tor_operations.check_availability, interval_sec=3)
+tor_service_status = tor_operations.check_availability(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
+if tor_service_status:
+    logging.info("Tor service is up.")
+else:
+    logging.error(f"Tor service is not up at {TOR_HOST}:{SOCKS_PORT}. Exiting!")
+    exit(1)
 
-    # Check if tor is up
-    logging.info("Checking if tor service is up.")
-    # Apply retry decorator
-    tor_operations.check_availability = retry_function(tor_operations.check_availability, interval_sec=3)
-    tor_service_status = tor_operations.check_availability(TOR_HOST, SOCKS_PORT, IP_REPORTER_API_URL)
-    if tor_service_status:
-        logging.info("Tor service is up.")
+# Check and set Chrome version environmental variable if missing
+if not os.environ.get("CHROME_VERSION"):
+    chrome_version_main = get_chrome_version()
+    logging.info(f"Environmental variable CHROME_VERSION is missing. Setting it to '{chrome_version_main}'.")
+    os.environ["CHROME_VERSION"] = chrome_version_main
+CHROME_VERSION = os.environ.get("CHROME_VERSION")
+
+# Start chrome_driver
+try:
+    chrome_options = uc.ChromeOptions()
+    chrome_options.add_argument(f"--proxy-server={socks_socket}")
+    chrome_driver = get_chrome_driver(
+        options=chrome_options,
+        chrome_driver_log_path=os.path.join(LOG_DIR_PATH, "chromedriver.log"))
+except Exception as exception:
+    log_string = f"While loading Chrome driver " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
+    exit(1)
+
+# Do the scraping
+c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS, page=24)
+c24_request_url = c24_request.prepare().url
+
+logging.info(f"Scraping c24 url {c24_request_url}")
+try:
+    c24_page = scrape_page_with_uc(c24_request_url, chrome_driver)
+except Exception as exception:
+    log_string = f"While trying to scrape c24, " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
+    del log_string
+    c24_page = ""
+
+# Export results
+if c24_page:
+    logging.info("Saving scraped data on disk.")
+    if not os.path.exists(SCRAPED_PAGES_NEW_PATH):
+        os.makedirs(SCRAPED_PAGES_NEW_PATH)
+
+    c24_export_filename = f"{datetime.today().strftime('%Y_%m_%d_%H%M')}_{C24_INDICATOR}"
+    c24_export_path = os.path.join(SCRAPED_PAGES_NEW_PATH, c24_export_filename)
+    with open(c24_export_path, "w", encoding="UTF-8") as c24_export_file:
+        c24_export_file.write(c24_page)
+    logging.info(f"Scraped data saved to {c24_export_path}")
+else:
+    log_string = "c24 scrape session unsuccessful!"
+    logging.error(log_string)
+    del log_string
+
+# Close tor service (shuts down tor container)
+try:
+    if TOR_CONTROL_PORT is not None:
+        tor_close_response = tor_operations.send_control_port_command(
+            command="SIGNAL TERM",
+            tor_host=TOR_HOST,
+            tor_control_port=TOR_CONTROL_PORT,
+            tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
+        logging.info(f"Tor service shut down with response {tor_close_response}.")
     else:
-        logging.error(f"Tor service is not up at {TOR_HOST}:{SOCKS_PORT}. Exiting!")
-        exit(1)
+        logging.info(f"Could not shut down tor service, "
+                     f"because there is no TOR_CONTROL_PORT environmental variable.")
+except Exception as exception:
+    log_string = f"While trying to close tor service, " \
+                 f"{type(exception).__name__} occurred: {exception}"
+    logging.exception(log_string)
+    del log_string
 
-    # Check and set Chrome version environmental variable if missing
-    if not os.environ.get("CHROME_VERSION"):
-        chrome_version_main = get_chrome_version()
-        logging.info(f"Environmental variable CHROME_VERSION is missing. Setting it to '{chrome_version_main}'.")
-        os.environ["CHROME_VERSION"] = chrome_version_main
-    CHROME_VERSION = os.environ.get("CHROME_VERSION")
-
-    # Start chrome_driver
-    try:
-        chrome_options = uc.ChromeOptions()
-        chrome_options.add_argument(f"--proxy-server={socks_socket}")
-        chrome_driver = get_chrome_driver(
-            options=chrome_options,
-            chrome_driver_log_path=os.path.join(LOG_DIR_PATH, "chromedriver.log"))
-    except Exception as exception:
-        log_string = f"While loading Chrome driver " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-        exit(1)
-
-    # Do the scraping
-    c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS, page=1)
-    c24_request_url = c24_request.prepare().url
-
-    logging.info(f"Scraping c24 url {c24_request_url}")
-    try:
-        c24_page = scrape_page_with_uc(c24_request_url, chrome_driver)
-    except Exception as exception:
-        log_string = f"While trying to scrape c24, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-        del log_string
-        c24_page = ""
-
-    # Export results
-    if c24_page:
-        logging.info("Saving scraped data on disk.")
-        if not os.path.exists(SCRAPED_PAGES_NEW_PATH):
-            os.makedirs(SCRAPED_PAGES_NEW_PATH)
-
-        c24_export_filename = f"{datetime.today().strftime('%Y_%m_%d_%H%M')}_{C24_INDICATOR}"
-        c24_export_path = os.path.join(SCRAPED_PAGES_NEW_PATH, c24_export_filename)
-        with open(c24_export_path, "w", encoding="UTF-8") as c24_export_file:
-            c24_export_file.write(c24_page)
-        logging.info(f"Scraped data saved to {c24_export_path}")
-    else:
-        log_string = "c24 scrape session unsuccessful!"
-        logging.error(log_string)
-        del log_string
-
-    # Close tor service (shuts down tor container)
-    try:
-        if TOR_CONTROL_PORT is not None:
-            tor_close_response = tor_operations.send_control_port_command(
-                command="SIGNAL TERM",
-                tor_host=TOR_HOST,
-                tor_control_port=TOR_CONTROL_PORT,
-                tor_control_port_password=TOR_CONTROL_PORT_PASSWORD)
-            logging.info(f"Tor service shut down with response {tor_close_response}.")
-        else:
-            logging.info(f"Could not shut down tor service, "
-                         f"because there is no TOR_CONTROL_PORT environmental variable.")
-    except Exception as exception:
-        log_string = f"While trying to close tor service, " \
-                     f"{type(exception).__name__} occurred: {exception}"
-        logging.exception(log_string)
-        del log_string
-
-    logging.info("c24 scraper finished")
+logging.info("c24 scraper finished")
