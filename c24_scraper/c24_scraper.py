@@ -4,6 +4,8 @@ import os
 import re
 import random
 import logging
+
+import requests
 import undetected_chromedriver as uc
 from collections.abc import Callable
 from requests import Request
@@ -149,12 +151,11 @@ def scrape_page_with_uc(url: str, driver: uc.Chrome) -> str:
     return scraped_data
 
 
-def get_c24_request(n_rooms: str, areas: str) -> Request:
+def get_c24_request(n_rooms: str, areas: str, page: int) -> Request:
     """
     Get a request for c24.
-
     Example get request from inspection:
-    https://m-api.city24.ee/et_EE/search/realties?address[cc]=1&address[city][]=3166&address[city][]=1535&tsType=sale&unitType=Apartment&roomCount=3&itemsPerPage=500&page=1
+    https://m-api.city24.ee/et_EE/search/realties?address[cc]=1&address[city][]=3166&address[city][]=1535&tsType=sale&unitType=Apartment&roomCount=3&itemsPerPage=50&page=1
 
     page=1 by default.
     address[cc] doesn't seem to be necessary.
@@ -164,25 +165,26 @@ def get_c24_request(n_rooms: str, areas: str) -> Request:
 
     :param n_rooms: Number of rooms to query for. String with comma separated values.
     :param areas: Area codes to query. String with comma separated values.
+    :param page: Number of page if results have more than one page. Starts from 1.
     :return: requests.models.Response object.
     """
-    c24_parameters = {
-        "tsType": "sale",
-        "unitType": "Apartment",
-        "itemsPerPage": 500}
-
-    # Handle several areas as input
-    for i, area in enumerate(areas.split(",")):
-        key_name = "address[city][" + str(i) + "]"
-        c24_parameters[key_name] = area
-
     # Handle querying for several apartment sizes (number of rooms)
     n_rooms = [int(i) for i in n_rooms.split(",")]
     if any(i >= 5 for i in n_rooms):
         n_rooms_smaller = [str(i) for i in n_rooms if i < 5]
-        c24_parameters["roomCount"] = ",".join(n_rooms_smaller + ["5+"])
+        n_rooms_parameter = ",".join(n_rooms_smaller + ["5+"])
     else:
-        c24_parameters["roomCount"] = ",".join([str(i) for i in n_rooms])
+        n_rooms_parameter = ",".join([str(i) for i in n_rooms])
+
+    c24_parameters = {
+        "address[cc]": 1,
+        "address[city][]": areas.split(","),
+        "tsType": "sale",
+        "unitType": "Apartment",
+        "roomCount": n_rooms_parameter,
+        "adReach": 1,
+        "itemsPerPage": 50,
+        "page": page}
 
     request = Request("GET", C24_BASE_URL, params=c24_parameters)
     return request
@@ -302,7 +304,7 @@ if __name__ == "__main__":
         exit(1)
 
     # Do the scraping
-    c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS)
+    c24_request = get_c24_request(n_rooms=C24_N_ROOMS, areas=C24_AREAS, page=1)
     c24_request_url = c24_request.prepare().url
 
     logging.info(f"Scraping c24 url {c24_request_url}")
