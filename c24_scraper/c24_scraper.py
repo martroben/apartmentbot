@@ -329,6 +329,8 @@ except Exception as exception:
 
 # Export results
 if c24_page:
+    if detect_blocking(c24_page):
+        logging.error("Possible anti-scraping blocking detected.")
     logging.info("Saving scraped data on disk.")
     if not os.path.exists(SCRAPED_PAGES_NEW_PATH):
         os.makedirs(SCRAPED_PAGES_NEW_PATH)
