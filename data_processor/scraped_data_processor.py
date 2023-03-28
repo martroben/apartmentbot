@@ -116,6 +116,9 @@ if __name__ == "__main__":
             logging.info(f"Detected c24 indicator, reading data.")
             try:
                 json_data = c24_data_operations.get_json_data(scraped_data_file_path)
+                if not json_data:       # If data can't be parsed, archive file and continue
+                    archive_scraped_data_file(scraped_data_file_path, SCRAPED_PAGES_PROCESSED_PATH, not_used=True)
+                    continue
                 for listing_json in json_data:
                     scraped_listings.add(c24_data_operations.get_listing(listing_json))
             except Exception as exception:
