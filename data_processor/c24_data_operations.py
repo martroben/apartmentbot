@@ -10,7 +10,7 @@ from calendar import timegm
 from data_classes import Listing
 
 
-def get_json_data(file_path: str) -> list[dict]:
+def get_json_data(file_path: str) -> (list[dict] | None):
     """
     Loads data from a c24 exported page source file and extracts the json component.
 
@@ -21,6 +21,8 @@ def get_json_data(file_path: str) -> list[dict]:
 
     with open(file_path) as exported_page:
         page = exported_page.readline()
+    if detect_blocking(page):
+        return
     selector = parsel.Selector(text=page)
     page_json_content = selector.xpath(c24_page_json_content_xpath).get()
     page_json = json.loads(page_json_content)
