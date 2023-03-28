@@ -140,3 +140,14 @@ def get_listing(data: dict) -> Listing:
         del log_string
 
     return listing
+
+
+def detect_blocking(page: str, threshold: int = 3) -> bool:
+    """
+    Detect if scraper has been blocked by anti-scraping by keyphrases in page source ("captcha", "trouble").
+    :param page: Scraped page source
+    :return: True if there is a certain number of blocking indicators
+    """
+    blocking_indicators_pattern = re.compile(r"captcha|trouble")
+    n_blocking_indicators = len(blocking_indicators_pattern.findall(page))
+    return n_blocking_indicators >= threshold
